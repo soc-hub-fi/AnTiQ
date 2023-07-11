@@ -1,3 +1,10 @@
+/*
+ * golden_model.sv - A reference model for the AnTiQ
+ * NOT UP TO DATE -> DISFUNCTIONAL
+ * 
+ * author(s): Antti Nurmi : antti.nurmi@tuni.fi
+ */
+
 module golden_model #(
   parameter int DEPTH = 5,
   parameter int DW    = 16,

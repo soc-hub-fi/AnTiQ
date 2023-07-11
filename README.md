@@ -1,6 +1,10 @@
 # AnTiQ
 A hardware priority queue with constant response time written in SystemVerilog.
 
+# Requirements
+- Mentor Questa/Modelsim is used for RTL simulation. Simulation instructions at ./sim/README.md.
+- Xilinx Vivado is required for FPGA implementations.
+
 # Contributing
 Contributions to the repository are welcome and appreciated.
 - For bug reporting, please use GitHub issues.
