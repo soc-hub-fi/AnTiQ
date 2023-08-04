@@ -8,7 +8,7 @@ A hardware priority queue with constant response time written in SystemVerilog.
 # Contributing
 Contributions to the repository are welcome and appreciated.
 - For bug reporting, please use GitHub issues.
-- For completed bug fixes and repository improvements such as testbench expansion, please create a merge request.
+- For completed bug fixes and repository improvements such as testbench expansion, please create a pull request.
 - Significant modifications to the behaviour or scope of the design are recommended to be forked to separate repositories.
 
 # References
