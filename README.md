@@ -14,3 +14,17 @@ Contributions to the repository are welcome and appreciated.
 # References
 When using this design in your reseach, please cite the following publication:
 - Antti Nurmi, Per Lindgren, Thomas Szymkowiak, Timo D. Hämäläinen: "AnTiQ: A Hardware-Accelerated Priority Queue Design with Constant Time Arbitrary Element Removal", 2023, 26th Euromicro conference on Digital System Design [in press]. 
+
+```
+@INPROCEEDINGS{AnTiQ,
+  author={Nurmi, Antti and Lindgren, Per and Szymkowiak, Tom and Hämäläinen, Timo D.},
+  booktitle={2023 26th Euromicro Conference on Digital System Design (DSD)}, 
+  title={AnTiQ: A Hardware-Accelerated Priority Queue Design with Constant Time Arbitrary Element Removal}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={462-469},
+  doi={10.1109/DSD60849.2023.00070}
+}
+
+```
