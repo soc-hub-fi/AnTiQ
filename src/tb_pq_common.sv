@@ -21,9 +21,21 @@ logic [  ID_WIDTH-1:0] drop_id, push_id;
 logic [DATA_WIDTH-1:0] data_i, data_o, data_overflow, peek_data;    
 logic                  overflow;
 
+int golden_queue[$];
+
+task print_queue ();
+  $write("time: %0t\t queue:", $time);
+  for (int it = 0; it < QUEUE_DEPTH; it++) begin
+    $write("[%2h]", golden_queue[it]);
+  end
+  $write("\n");
+endtask
+
 task insert_val( int insert_data );
   push   =  1;
   data_i =  insert_data;
+  golden_queue.push_back(insert_data);
+  golden_queue.sort();
   $display("push data %04h to queue", insert_data);
   @(negedge clk);
   while(~push_rdy) begin
@@ -33,6 +45,7 @@ task insert_val( int insert_data );
   push   =  0;
   data_i = '0;
   #0;
+  print_queue();
 endtask
 
 task pop_val();
@@ -41,15 +54,20 @@ task pop_val();
   while(~pop_rdy) begin
     @(negedge clk);
   end
+  golden_queue.pop_front();
   $display("popped data %h from queue", data_o);
   @(posedge clk);
   pop   =  0;
   #0;
+  print_queue();
 endtask
 
 task drop_val( int dropped_id );
   drop    = 1;
   drop_id = dropped_id;
+  for (int it = 0; it < QUEUE_DEPTH; it++) begin
+    
+  end
   $display("dropped data with ID: %04h from queue", dropped_id);
   #0;
   while(~drop_rdy) begin
@@ -97,6 +115,7 @@ initial begin
   rst_n  =  1;
   #45;
   
+  print_queue();
   // basic push + pop
   insert_sequence({'hF0, 'h15, 'h87});
   pop_sequence(3);
