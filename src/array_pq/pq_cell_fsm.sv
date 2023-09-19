@@ -116,10 +116,12 @@ always_comb
           end
           push_s     = 1;
           next_state = PUSH_POP;
-        end else if (pop_vld_i & ~empty) begin
+        end else if (pop_vld_i & ~empty & ~drop_i) begin
           in_sel_o   = 2'b10;
           out_sel_o  = 2'b10;
-        end else if(drop_i) begin
+          pop_s      = 1;
+          next_state = POP_REQ;
+        end else if(drop_i & ~empty_r) begin
           drop_s     = 1;
           if (next_id_i == drop_id_i) begin
             in_sel_o  = 2'b11;

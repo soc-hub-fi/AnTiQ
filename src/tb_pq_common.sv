@@ -24,6 +24,7 @@ logic                  overflow;
 int golden_queue[$];
 
 task print_queue ();
+  $write("time: %0t\t queue:", $time);
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
     $write("[%2h]", golden_queue[it]);
   end
