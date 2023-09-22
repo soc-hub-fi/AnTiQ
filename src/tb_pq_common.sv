@@ -5,7 +5,6 @@
  */
 
 `timescale 1ns/1ps
-//`define GOLDEN
 
 module tb_pq_common ();
   import pq_pkg::*;
@@ -21,21 +20,21 @@ logic [  ID_WIDTH-1:0] drop_id, push_id;
 logic [DATA_WIDTH-1:0] data_i, data_o, data_overflow, peek_data;    
 logic                  overflow;
 
-int golden_queue[$];
+tb_cell_t value_queue[$];
+int id_queue[$];
 
 task print_queue ();
   $write("time: %0t\t queue:", $time);
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    $write("[%2h]", golden_queue[it]);
+    $write("[%2h:%2h]", value_queue[it].data,value_queue[it].id);
   end
   $write("\n");
 endtask
 
 task insert_val( int insert_data );
+  automatic tb_cell_t tmp;
   push   =  1;
   data_i =  insert_data;
-  golden_queue.push_back(insert_data);
-  golden_queue.sort();
   $display("push data %04h to queue", insert_data);
   @(negedge clk);
   while(~push_rdy) begin
@@ -44,6 +43,10 @@ task insert_val( int insert_data );
   @(posedge clk);
   push   =  0;
   data_i = '0;
+  tmp.data = insert_data;
+  tmp.id = push_id;
+  value_queue.push_back(tmp);
+  value_queue.sort();
   #0;
   print_queue();
 endtask
@@ -54,7 +57,7 @@ task pop_val();
   while(~pop_rdy) begin
     @(negedge clk);
   end
-  golden_queue.pop_front();
+  value_queue.pop_front();
   $display("popped data %h from queue", data_o);
   @(posedge clk);
   pop   =  0;
@@ -66,7 +69,8 @@ task drop_val( int dropped_id );
   drop    = 1;
   drop_id = dropped_id;
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    
+    if(value_queue[it].id == dropped_id)
+      value_queue.delete(it);
   end
   $display("dropped data with ID: %04h from queue", dropped_id);
   #0;
@@ -77,6 +81,8 @@ task drop_val( int dropped_id );
   drop    =  0;
   drop_id = '0;
   #0;
+  print_queue();
+
 endtask
 
 // helper tasks to clean up tb code
@@ -137,11 +143,8 @@ end
 
 always #5 clk = ~clk; // clk gen
 
-`ifdef GOLDEN
 golden_model #(
-`else
 pq #(
-`endif
   .DEPTH ( QUEUE_DEPTH ),
   .DW    ( DATA_WIDTH  )
 ) i_dut (

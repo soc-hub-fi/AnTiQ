@@ -16,4 +16,10 @@ package pq_pkg;
     logic [  ID_WIDTH-1:0] id;
   } cell_t;
 
+  typedef struct packed {
+    int data;
+    int id;
+  } tb_cell_t;
+
+
 endpackage
