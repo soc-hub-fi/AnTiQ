@@ -35,7 +35,7 @@ task insert_val( int insert_data );
   automatic tb_cell_t tmp;
   push   =  1;
   data_i =  insert_data;
-  $display("push data %04h to queue", insert_data);
+
   @(negedge clk);
   while(~push_rdy) begin
     @(negedge clk);
@@ -45,6 +45,7 @@ task insert_val( int insert_data );
   data_i = '0;
   tmp.data = insert_data;
   tmp.id = push_id;
+  $write("[PUSH] data:%2h, id:%2h ", insert_data, push_id);
   value_queue.push_back(tmp);
   value_queue.sort();
   #0;
@@ -52,27 +53,39 @@ task insert_val( int insert_data );
 endtask
 
 task pop_val();
+  automatic tb_cell_t tmp;
   pop    =  1;
   @(negedge clk);
   while(~pop_rdy) begin
     @(negedge clk);
   end
-  value_queue.pop_front();
-  $display("popped data %h from queue", data_o);
+  tmp = value_queue.pop_front();
+  $write("[POP ] data:%2h, id:%2h ", tmp.data, tmp.id);
   @(posedge clk);
   pop   =  0;
   #0;
   print_queue();
+  // ASSERT data_o == tmp.data
 endtask
 
 task drop_val( int dropped_id );
+  automatic int tmp_id;
+  automatic int tmp_data;
+  automatic int idx;
   drop    = 1;
   drop_id = dropped_id;
-  for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    if(value_queue[it].id == dropped_id)
-      value_queue.delete(it);
-  end
-  $display("dropped data with ID: %04h from queue", dropped_id);
+
+  // check this : https://verificationacademy.com/forums/systemverilog/how-safely-delete-entries-queue
+  //idx = value_queue.find_index() with (value.data == dropped_id);
+  //foreach()
+//  for (int it = 0; it < QUEUE_DEPTH; it++) begin
+ //   if(value_queue[it].id == dropped_id)
+ //     tmp_id = dropped_id;
+ //     tmp_data = value_queue[it].data;
+//      idx = it;
+//  end
+  value_queue.delete(idx);
+  $write("[DROP] data: id: %04h from queue", dropped_id);
   #0;
   while(~drop_rdy) begin
     @(negedge clk);
@@ -121,7 +134,7 @@ initial begin
   rst_n  =  1;
   #45;
   
-  print_queue();
+  //print_queue();
   // basic push + pop
   insert_sequence({'hF0, 'h15, 'h87});
   pop_sequence(3);
@@ -143,7 +156,6 @@ end
 
 always #5 clk = ~clk; // clk gen
 
-golden_model #(
 pq #(
   .DEPTH ( QUEUE_DEPTH ),
   .DW    ( DATA_WIDTH  )
