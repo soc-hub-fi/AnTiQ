@@ -20,7 +20,8 @@ logic [  ID_WIDTH-1:0] drop_id, push_id;
 logic [DATA_WIDTH-1:0] data_i, data_o, data_overflow, peek_data;    
 logic                  overflow;
 
-//typedef enum { PUSH, POP, DROP } op_set;
+typedef enum int { NOP, PUSH, POP, DROP } op_t;
+op_t ops;
 
 tb_cell_t value_queue[$];
 int id_queue[$];
@@ -116,6 +117,7 @@ task flush();
 endtask
 
 initial begin
+
   clk     =  0;
   rst_n   =  0;
   push    =  0;
@@ -149,6 +151,24 @@ initial begin
 
   for (int op = 0; op < TEST_OPS; op++) begin 
     // TODO: random stimulus gen
+    void'(randomize(ops));
+    case (ops)
+      NOP: begin
+        $display("NOP");
+      end
+      PUSH: begin
+        $display("PUSH");
+      end
+      POP: begin
+        $display("POP");
+      end
+      DROP: begin
+        $display("DROP");
+      end 
+      default: begin
+        $display("NOP");
+      end 
+    endcase
   end
 
 end
