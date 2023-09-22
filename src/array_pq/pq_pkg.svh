@@ -10,6 +10,7 @@ package pq_pkg;
   localparam DATA_WIDTH  = 16;
   localparam CNT_WIDTH   = $clog2(QUEUE_DEPTH);
   localparam ID_WIDTH    = CNT_WIDTH + 1;
+  localparam TEST_OPS    = 25;
 
   typedef struct packed {
     logic [DATA_WIDTH-1:0] data;

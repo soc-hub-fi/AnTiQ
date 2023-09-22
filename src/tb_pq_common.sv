@@ -20,11 +20,13 @@ logic [  ID_WIDTH-1:0] drop_id, push_id;
 logic [DATA_WIDTH-1:0] data_i, data_o, data_overflow, peek_data;    
 logic                  overflow;
 
+//typedef enum { PUSH, POP, DROP } op_set;
+
 tb_cell_t value_queue[$];
 int id_queue[$];
 
 task print_queue ();
-  $write("time: %0t\t queue:", $time);
+  $write("time: %06t queue:", $time);
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
     $write("[%2h:%2h]", value_queue[it].data,value_queue[it].id);
   end
@@ -65,27 +67,20 @@ task pop_val();
   pop   =  0;
   #0;
   print_queue();
-  // ASSERT data_o == tmp.data
+  assert (data_o == tmp.data) 
+  else   $fatal("pop data mismatch with reference!");
 endtask
 
 task drop_val( int dropped_id );
-  automatic int tmp_id;
-  automatic int tmp_data;
-  automatic int idx;
+  automatic int idx[$];
   drop    = 1;
   drop_id = dropped_id;
-
-  // check this : https://verificationacademy.com/forums/systemverilog/how-safely-delete-entries-queue
-  //idx = value_queue.find_index() with (value.data == dropped_id);
-  //foreach()
-//  for (int it = 0; it < QUEUE_DEPTH; it++) begin
- //   if(value_queue[it].id == dropped_id)
- //     tmp_id = dropped_id;
- //     tmp_data = value_queue[it].data;
-//      idx = it;
-//  end
-  value_queue.delete(idx);
-  $write("[DROP] data: id: %04h from queue", dropped_id);
+  for (int it = 0; it < QUEUE_DEPTH; it++) begin
+    if(value_queue[it].id == dropped_id)
+      $write("[DROP] data:%2h, id:%2h ",value_queue[it].data, value_queue[it].id);
+  end
+  idx = value_queue.find_first_index with (item == dropped_id);
+  foreach(value_queue[del]) value_queue.delete(del);
   #0;
   while(~drop_rdy) begin
     @(negedge clk);
@@ -95,7 +90,6 @@ task drop_val( int dropped_id );
   drop_id = '0;
   #0;
   print_queue();
-
 endtask
 
 // helper tasks to clean up tb code
@@ -152,6 +146,11 @@ initial begin
   pop_val();
   insert_sequence({'h13});
   //insert_sequence({'h0F});
+
+  for (int op = 0; op < TEST_OPS; op++) begin 
+    // TODO: random stimulus gen
+  end
+
 end
 
 always #5 clk = ~clk; // clk gen
