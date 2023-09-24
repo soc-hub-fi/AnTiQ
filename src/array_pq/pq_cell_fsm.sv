@@ -161,7 +161,7 @@ always_comb
         in_sel_o   = 2'b10;
         out_sel_o  = 2'b10;
         pop_vld_o  = 1;
-        if (empty)
+        if (empty & ~pop_comp_i)
           next_state = EMPTY;
         else
           next_state = IDLE;
@@ -175,12 +175,12 @@ always_comb
         next_state = IDLE;
       end
       DROP_VLD: begin
-        in_sel_o   = 2'b11;
+        //in_sel_o   = 2'b11;
         next_state = DROP_DONE;
       end
       DROP_DONE: begin
         drop_vld_o = 1;
-        in_sel_o   = 2'b10;
+        //in_sel_o   = 2'b10;
           if (drop_id_i == curr_id_i) begin
           in_sel_o   = 2'b11;
           pop_s      = 1;
@@ -194,6 +194,7 @@ always_comb
           next_state = IDLE;
       end
       IDLE: begin
+        full_o     = 1;
         peek_vld_o = 1;
         out_sel_o  = 2'b01;
         if (push_i) begin
