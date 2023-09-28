@@ -1,3 +1,3 @@
-run 900 ns
+run -all
 exit
 

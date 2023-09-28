@@ -7,20 +7,20 @@
 module pq_cell 
   import pq_pkg::*;
 #(
-  parameter DW = 16,
-  parameter IW = 4,
+  parameter TW = 16,
+  //parameter IW = 4,
   parameter ID = 0        
 )(
   input  logic          clk_i,
   input  logic          rst_ni,
   output logic          full_o,
   output logic          peek_vld_o,
-  output logic [DW-1:0] peek_data_o,
+  output logic [TW-1:0] peek_data_o,
   // n-1 interface
   input  logic          push_i,
   input  logic          pop_i,
   input  logic          drop_i,
-  input  logic [IW-1:0] drop_id_i,
+  input  logic [TW-1:0] drop_id_i,
   output logic          push_vld_o,
   output logic          pop_vld_o,
   output logic          drop_vld_o,
@@ -30,7 +30,7 @@ module pq_cell
   output logic          push_o,
   output logic          pop_o,
   output logic          drop_o,
-  output logic [IW-1:0] drop_id_o,
+  output logic [TW-1:0] drop_id_o,
   input  logic          push_vld_i,
   input  logic          pop_vld_i,
   input  logic          drop_vld_i,
@@ -116,7 +116,7 @@ assign pop_struct_o  = pop_r;
 assign peek_data_o   = cell_r.data;
 
 pq_cell_fsm #(
-  .IW ( IW )
+  .TW ( TW )
 ) i_fsm (
   .clk_i         ( clk_i            ),
   .rst_ni        ( rst_ni           ),

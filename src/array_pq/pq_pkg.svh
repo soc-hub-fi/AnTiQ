@@ -7,14 +7,13 @@
 package pq_pkg;
 
   localparam QUEUE_DEPTH = 8;
-  localparam DATA_WIDTH  = 8;
+  localparam TIME_WIDTH  = 16;
   localparam CNT_WIDTH   = $clog2(QUEUE_DEPTH);
-  localparam ID_WIDTH    = CNT_WIDTH + 1;
-  localparam TEST_OPS    = 35;
+  localparam TEST_OPS    = 200;
 
   typedef struct packed {
-    logic [DATA_WIDTH-1:0] data;
-    logic [  ID_WIDTH-1:0] id;
+    logic [TIME_WIDTH-1:0] data;
+    logic [TIME_WIDTH-1:0] id;
   } cell_t;
 
 endpackage
