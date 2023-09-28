@@ -138,7 +138,7 @@ always_comb
           next_state = POP_REQ;
         end else if (drop_i) begin
           drop_s = 1;
-          next_state = DROP_DONE;
+          next_state = DROP_VLD;
         end else
           in_sel_o   = 2'b10;
       end
@@ -162,7 +162,10 @@ always_comb
         pop_s      = 1;
         in_sel_o   = 2'b10;
         out_sel_o  = 2'b10;
-        pop_vld_o  = 1;
+        if(~drop_i)
+          pop_vld_o  = 1;
+        else
+          drop_vld_o = 1;
         if (empty & ~pop_comp_i)
           next_state = EMPTY;
         else
@@ -177,6 +180,7 @@ always_comb
         next_state = IDLE;
       end
       DROP_VLD: begin
+        drop_s = 1;
         next_state = DROP_DONE;
       end
       DROP_DONE: begin
@@ -185,10 +189,12 @@ always_comb
           in_sel_o   = 2'b11;
           pop_s      = 1;
           out_sel_o  = 2'b10;
-        end else begin          
+        end //else begin          
           drop_s   = 1;
-        end
-        if(empty_r)
+        //end
+        if(push_i)
+          next_state = PUSH;
+        else if(empty_r)
           next_state = EMPTY;
         else
           next_state = IDLE;
