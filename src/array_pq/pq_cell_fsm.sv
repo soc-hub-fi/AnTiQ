@@ -137,6 +137,9 @@ always_comb
           out_sel_o  = 2'b10;
           pop_s      = 1;
           next_state = POP_REQ;
+        end else if (drop_i) begin
+          drop_s = 1;
+          next_state = DROP_DONE;
         end else
           in_sel_o   = 2'b10;
       end

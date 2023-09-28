@@ -23,8 +23,11 @@ logic                  overflow;
 typedef enum int { NOP, PUSH, POP, DROP } op_t;
 op_t ops;
 
-tb_cell_t value_queue[$];
-int id_queue[$];
+logic [DATA_WIDTH-1:0] rand_data;
+logic [DATA_WIDTH-1:0] unin_data;
+logic [  ID_WIDTH-1:0] rand_id;
+
+cell_t value_queue[$];
 
 task print_queue ();
   $write("time: %06t queue:", $time);
@@ -35,8 +38,8 @@ task print_queue ();
   $write("\n");
 endtask
 
-task insert_val( int insert_data );
-  automatic tb_cell_t tmp;
+task insert_val( logic [DATA_WIDTH-1:0] insert_data );
+  automatic cell_t tmp;
   push   =  1;
   data_i =  insert_data;
   @(negedge clk);
@@ -60,17 +63,16 @@ task insert_val( int insert_data );
   end
   $write("[PUSH] data:%2h, id:%2h ", insert_data, push_id);
   print_queue();
-
   #0;
 endtask
 
 task pop_val();
-  automatic tb_cell_t tmp;
+  automatic cell_t tmp;
   if(~empty) begin
     pop    =  1;
     @(negedge clk);
     tmp = value_queue.pop_front();
-    $write("[POP ] data:%2h, id:%2h ", tmp.data, tmp.id);
+    $write("[POP ] data:%h, id:%2h ", tmp.data, tmp.id);
     while(~pop_rdy) begin
       @(negedge clk);
     end
@@ -79,23 +81,25 @@ task pop_val();
     #0;
     print_queue();
     assert (data_o == tmp.data) 
-    else   $fatal("pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
+    else   $fatal(1, "pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
   end
 endtask
 
 task drop_val( int dropped_id );
   automatic int idx[$];
+  automatic bit found = 0;
   drop    = 1;
   drop_id = dropped_id;
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    if(value_queue[it].id == dropped_id)
+    if(value_queue[it].id == dropped_id) begin
       $write("[DROP] data:%2h, id:%2h ",value_queue[it].data, value_queue[it].id);
+      found = 1;
+    end
   end
-  //idx = value_queue.find_first_index with (item == dropped_id);
-  //foreach(value_queue[del]) value_queue.delete(del);
+  if (~found)
+    $write("[DROP] data:%2h, id:%2h ",unin_data, dropped_id);
   for (int it = 0; it<value_queue.size(); it++)
     if (value_queue[it].id == dropped_id) begin
-      //$display("VALUE FOUND!");
       value_queue.delete(it--);
     end
   #0;
@@ -116,29 +120,6 @@ task nop();
   print_queue();
 endtask
 
-// helper tasks to clean up tb code
-task insert_sequence( int vals[$] );
-  for(int it=0; it < vals.size; it++) 
-  begin
-    insert_val(vals[it]);
-  end
-endtask
-
-task delay( int cycles );
-  repeat(cycles) @(posedge clk);
-endtask
-
-task pop_sequence( int nr );
-  for (int it=0; it < nr; it++)
-  begin
-    pop_val();
-  end
-endtask
-
-task flush();
-  while(!empty) pop_val;
-endtask
-
 initial begin
 
   clk     =  0;
@@ -152,53 +133,30 @@ initial begin
   #13;
   rst_n  =  1;
   #45;
-  
-
-  //print_queue();
-  // basic push + pop
-  insert_sequence({'hF0, 'h15, 'h87});
-  pop_sequence(3);
-  delay(5);
-
-  // pop, then drop
-  insert_sequence({'h01, 'hEB, 'hAF});
-  pop_sequence(1);
-  drop_val('d3);
-  pop_sequence(1);
-  delay(10);
-
-  // data collision test
-  insert_sequence({'h01, 'h11, 'h12});
-  pop_val();
-  insert_sequence({'h13});
-  //insert_sequence({'h0F});
 
   for (int op = 0; op < TEST_OPS; op++) begin 
     // TODO: random stimulus gen
-    void'(randomize(ops));
+    void'(randomize(      ops));
+    void'(randomize(rand_data));
+    void'(randomize(  rand_id));
     case (ops)
       NOP: begin
         nop();
       end
       PUSH: begin
-        $display("PUSH");
-        @(negedge clk);
-        @(posedge clk);
+        insert_val(rand_data);
       end
       POP: begin
         pop_val();
       end
       DROP: begin
-        $display("DROP");
-        @(negedge clk);
-        @(posedge clk);
+        drop_val(rand_id);
       end 
       default: begin
         nop();
       end 
     endcase
   end
-
 end
 
 always #5 clk = ~clk; // clk gen
@@ -228,4 +186,9 @@ pq #(
   .data_overflow_o ( data_overflow )
 );
 
+always @(*) begin
+  // TODO: implement logic to check only one *_rdy can be high at a time
+  //assert (drop_rdy | push_rdy | pop_rdy)
+  //else $fatal(1, "Multiple top handshakes active!");
+  end
 endmodule // tb_pq
