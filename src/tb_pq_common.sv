@@ -5,7 +5,6 @@
  */
 
 `timescale 1ns/1ps
-//`define GOLDEN
 
 module tb_pq_common ();
   import pq_pkg::*;
@@ -21,22 +20,28 @@ logic [  ID_WIDTH-1:0] drop_id, push_id;
 logic [DATA_WIDTH-1:0] data_i, data_o, data_overflow, peek_data;    
 logic                  overflow;
 
-int golden_queue[$];
+typedef enum int { NOP, PUSH, POP, DROP } op_t;
+op_t ops;
+
+logic [DATA_WIDTH-1:0] rand_data;
+logic [DATA_WIDTH-1:0] unin_data;
+logic [  ID_WIDTH-1:0] rand_id;
+
+cell_t value_queue[$];
 
 task print_queue ();
-  $write("time: %0t\t queue:", $time);
+  $write("time: %06t queue:", $time);
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    $write("[%2h]", golden_queue[it]);
+    $write("[%2h:%1h]", value_queue[it].data,value_queue[it].id);
   end
+  $write(" q_size: %2d", value_queue.size());
   $write("\n");
 endtask
 
-task insert_val( int insert_data );
+task insert_val( logic [DATA_WIDTH-1:0] insert_data );
+  automatic cell_t tmp;
   push   =  1;
   data_i =  insert_data;
-  golden_queue.push_back(insert_data);
-  golden_queue.sort();
-  $display("push data %04h to queue", insert_data);
   @(negedge clk);
   while(~push_rdy) begin
     @(negedge clk);
@@ -44,31 +49,59 @@ task insert_val( int insert_data );
   @(posedge clk);
   push   =  0;
   data_i = '0;
-  #0;
+  tmp.data = insert_data;
+  tmp.id = push_id;
+  if(value_queue.size() == QUEUE_DEPTH) begin
+    if(insert_data < value_queue[QUEUE_DEPTH-1].data) begin
+      void'(value_queue.pop_back());
+      value_queue.push_back(tmp);
+      value_queue.sort();
+    end
+  end else if (value_queue.size() < QUEUE_DEPTH) begin
+    value_queue.push_back(tmp);
+    value_queue.sort();
+  end
+  $write("[PUSH] data:%2h, id:%2h ", insert_data, push_id);
   print_queue();
+  #0;
 endtask
 
 task pop_val();
-  pop    =  1;
-  @(negedge clk);
-  while(~pop_rdy) begin
+  automatic cell_t tmp;
+  if(~empty) begin
+    pop    =  1;
     @(negedge clk);
+    tmp = value_queue.pop_front();
+    $write("[POP ] data:%h, id:%2h ", tmp.data, tmp.id);
+    while(~pop_rdy) begin
+      @(negedge clk);
+    end
+    @(posedge clk);
+    pop   =  0;
+    #0;
+    print_queue();
+    assert (data_o == tmp.data) 
+    else   $fatal(1, "pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
   end
-  golden_queue.pop_front();
-  $display("popped data %h from queue", data_o);
-  @(posedge clk);
-  pop   =  0;
-  #0;
-  print_queue();
 endtask
 
 task drop_val( int dropped_id );
+  automatic int idx[$];
+  automatic bit found = 0;
   drop    = 1;
   drop_id = dropped_id;
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    
+    if(value_queue[it].id == dropped_id) begin
+      $write("[DROP] data:%2h, id:%2h ",value_queue[it].data, value_queue[it].id);
+      found = 1;
+    end
   end
-  $display("dropped data with ID: %04h from queue", dropped_id);
+  if (~found)
+    $write("[DROP] data:%2h, id:%2h ",unin_data, dropped_id);
+  for (int it = 0; it<value_queue.size(); it++)
+    if (value_queue[it].id == dropped_id) begin
+      value_queue.delete(it--);
+    end
   #0;
   while(~drop_rdy) begin
     @(negedge clk);
@@ -77,32 +110,18 @@ task drop_val( int dropped_id );
   drop    =  0;
   drop_id = '0;
   #0;
+  print_queue();
 endtask
 
-// helper tasks to clean up tb code
-task insert_sequence( int vals[$] );
-  for(int it=0; it < vals.size; it++) 
-  begin
-    insert_val(vals[it]);
-  end
-endtask
-
-task delay( int cycles );
-  repeat(cycles) @(posedge clk);
-endtask
-
-task pop_sequence( int nr );
-  for (int it=0; it < nr; it++)
-  begin
-    pop_val();
-  end
-endtask
-
-task flush();
-  while(!empty) pop_val;
+task nop();
+  @(negedge clk);
+  @(posedge clk);
+  $write("[NOP ]\t        ");
+  print_queue();
 endtask
 
 initial begin
+
   clk     =  0;
   rst_n   =  0;
   push    =  0;
@@ -114,34 +133,35 @@ initial begin
   #13;
   rst_n  =  1;
   #45;
-  
-  print_queue();
-  // basic push + pop
-  insert_sequence({'hF0, 'h15, 'h87});
-  pop_sequence(3);
-  delay(5);
 
-  // pop, then drop
-  insert_sequence({'h01, 'hEB, 'hAF});
-  pop_sequence(1);
-  drop_val('d3);
-  pop_sequence(1);
-  delay(10);
-
-  // data collision test
-  insert_sequence({'h01, 'h11, 'h12});
-  pop_val();
-  insert_sequence({'h13});
-  //insert_sequence({'h0F});
+  for (int op = 0; op < TEST_OPS; op++) begin 
+    // TODO: random stimulus gen
+    void'(randomize(      ops));
+    void'(randomize(rand_data));
+    void'(randomize(  rand_id));
+    case (ops)
+      NOP: begin
+        nop();
+      end
+      PUSH: begin
+        insert_val(rand_data);
+      end
+      POP: begin
+        pop_val();
+      end
+      DROP: begin
+        drop_val(rand_id);
+      end 
+      default: begin
+        nop();
+      end 
+    endcase
+  end
 end
 
 always #5 clk = ~clk; // clk gen
 
-`ifdef GOLDEN
-golden_model #(
-`else
 pq #(
-`endif
   .DEPTH ( QUEUE_DEPTH ),
   .DW    ( DATA_WIDTH  )
 ) i_dut (
@@ -166,4 +186,9 @@ pq #(
   .data_overflow_o ( data_overflow )
 );
 
+always @(*) begin
+  // TODO: implement logic to check only one *_rdy can be high at a time
+  //assert (drop_rdy | push_rdy | pop_rdy)
+  //else $fatal(1, "Multiple top handshakes active!");
+  end
 endmodule // tb_pq

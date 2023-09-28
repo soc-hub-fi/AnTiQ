@@ -2,5 +2,4 @@
 ../src/array_pq/pq.sv \
 ../src/array_pq/pq_cell_fsm.sv \
 ../src/array_pq/pq_cell.sv \
-../src/golden_model.sv \
 ../src/tb_pq_common.sv
