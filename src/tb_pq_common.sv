@@ -39,8 +39,6 @@ task insert_val( int insert_data );
   automatic tb_cell_t tmp;
   push   =  1;
   data_i =  insert_data;
-  $write("[PUSH] data:%2h, id:%2h ", insert_data, push_id);
-  print_queue();
   @(negedge clk);
   while(~push_rdy) begin
     @(negedge clk);
@@ -60,6 +58,9 @@ task insert_val( int insert_data );
     value_queue.push_back(tmp);
     value_queue.sort();
   end
+  $write("[PUSH] data:%2h, id:%2h ", insert_data, push_id);
+  print_queue();
+
   #0;
 endtask
 
@@ -93,8 +94,10 @@ task drop_val( int dropped_id );
   //idx = value_queue.find_first_index with (item == dropped_id);
   //foreach(value_queue[del]) value_queue.delete(del);
   for (int it = 0; it<value_queue.size(); it++)
-    if (value_queue[it] == dropped_id)
+    if (value_queue[it].id == dropped_id) begin
+      //$display("VALUE FOUND!");
       value_queue.delete(it--);
+    end
   #0;
   while(~drop_rdy) begin
     @(negedge clk);
