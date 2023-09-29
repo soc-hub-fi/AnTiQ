@@ -1,11 +1,11 @@
 /*
- * pq_cell_fsm.sv - Finite state machine to control priority queue cells
+ * pq_cell_fsm.sv - AnTiQ cell control FSM instance
  * 
  * author(s): Antti Nurmi : antti.nurmi@tuni.fi
  */
 
 module pq_cell_fsm #(
-  parameter IW = 4
+  parameter TW = 4
 )(
   input  logic          clk_i,
   input  logic          rst_ni,
@@ -27,10 +27,10 @@ module pq_cell_fsm #(
   output logic          pop_bypass_o,
   output logic          full_o,
   output logic          peek_vld_o,
-  input  logic [IW-1:0] curr_id_i,
-  input  logic [IW-1:0] next_id_i,
-  input  logic [IW-1:0] drop_id_i,
-  output logic [IW-1:0] drop_id_o,
+  input  logic [TW-1:0] curr_id_i,
+  input  logic [TW-1:0] next_id_i,
+  input  logic [TW-1:0] drop_id_i,
+  output logic [TW-1:0] drop_id_o,
   output logic [   1:0] in_sel_o,
   output logic [   1:0] out_sel_o
 );
@@ -51,7 +51,7 @@ logic          push_s;
 logic          pop_s;
 logic          drop_s;
 
-logic [IW-1:0] drop_id_r;
+logic [TW-1:0] drop_id_r;
 logic          empty_r;
 logic          push_r;
 logic          pop_r;
@@ -104,9 +104,9 @@ always_comb
       EMPTY: begin
         if (curr_id_i == drop_id_i)
           in_sel_o = 2'b00;
-        if (push_i & pop_vld_i) begin
+        if (push_i & pop_vld_i & pop_comp_i) begin
           if (~pop_comp_i) begin
-            in_sel_o      = 2'b10;
+            in_sel_o      = 2'b01;
             out_sel_o     = 2'b01;
             push_bypass_o = 1;
           end
@@ -114,7 +114,6 @@ always_comb
             in_sel_o      = 2'b01;
             out_sel_o     = 2'b11;
           end
-          push_s     = 1;
           next_state = PUSH_POP;
         end else if (pop_vld_i & ~empty & ~drop_i) begin
           in_sel_o   = 2'b10;
@@ -139,7 +138,7 @@ always_comb
           next_state = POP_REQ;
         end else if (drop_i) begin
           drop_s = 1;
-          next_state = DROP_DONE;
+          next_state = DROP_VLD;
         end else
           in_sel_o   = 2'b10;
       end
@@ -163,7 +162,10 @@ always_comb
         pop_s      = 1;
         in_sel_o   = 2'b10;
         out_sel_o  = 2'b10;
-        pop_vld_o  = 1;
+        if(~drop_i)
+          pop_vld_o  = 1;
+        else
+          drop_vld_o = 1;
         if (empty & ~pop_comp_i)
           next_state = EMPTY;
         else
@@ -172,26 +174,27 @@ always_comb
       PUSH_POP: begin
         if(pop_comp_i) begin
           out_sel_o = 2'b10;
-        end
-        push_s     = 1;
+        end 
+        in_sel_o   = 2'b01;
         push_vld_o = 1;
         next_state = IDLE;
       end
       DROP_VLD: begin
-        //in_sel_o   = 2'b11;
+        drop_s = 1;
         next_state = DROP_DONE;
       end
       DROP_DONE: begin
         drop_vld_o = 1;
-        //in_sel_o   = 2'b10;
           if (drop_id_i == curr_id_i) begin
           in_sel_o   = 2'b11;
           pop_s      = 1;
           out_sel_o  = 2'b10;
-        end else begin          
+        end //else begin          
           drop_s   = 1;
-        end
-        if(empty_r)
+        //end
+        if(push_i)
+          next_state = PUSH;
+        else if(empty_r)
           next_state = EMPTY;
         else
           next_state = IDLE;

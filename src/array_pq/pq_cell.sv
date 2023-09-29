@@ -1,5 +1,5 @@
 /*
- * pq_cell.sv - Single priority queue cell replicated in pq.sv
+ * pq_cell.sv - AnTiQ cell instance
  * 
  * author(s): Antti Nurmi : antti.nurmi@tuni.fi
  */
@@ -7,20 +7,20 @@
 module pq_cell 
   import pq_pkg::*;
 #(
-  parameter DW = 16,
-  parameter IW = 4,
+  parameter TW = 16,
+  //parameter IW = 4,
   parameter ID = 0        
 )(
   input  logic          clk_i,
   input  logic          rst_ni,
   output logic          full_o,
   output logic          peek_vld_o,
-  output logic [DW-1:0] peek_data_o,
+  output logic [TW-1:0] peek_data_o,
   // n-1 interface
   input  logic          push_i,
   input  logic          pop_i,
   input  logic          drop_i,
-  input  logic [IW-1:0] drop_id_i,
+  input  logic [TW-1:0] drop_id_i,
   output logic          push_vld_o,
   output logic          pop_vld_o,
   output logic          drop_vld_o,
@@ -30,7 +30,7 @@ module pq_cell
   output logic          push_o,
   output logic          pop_o,
   output logic          drop_o,
-  output logic [IW-1:0] drop_id_o,
+  output logic [TW-1:0] drop_id_o,
   input  logic          push_vld_i,
   input  logic          pop_vld_i,
   input  logic          drop_vld_i,
@@ -52,8 +52,8 @@ logic       pop_bypass;
 
 logic curr_comp; // push.data higher priority than current
 logic pop_comp;  // push.data higher priority than pop_i
-assign curr_comp = ( push_struct_i.data < cell_r.data       ) ? 1 : 0;
-assign pop_comp  = ( push_struct_i.data < pop_struct_i.data ) ? 1 : 0;
+assign curr_comp = ( (push_struct_i.data < cell_r.data      ) | (cell_r.data       == '0)) ? 1 : 0;
+assign pop_comp  = ( (push_struct_i.data < pop_struct_i.data) | (pop_struct_i.data == '0)) ? 1 : 0;
 
 always_comb
   begin
@@ -116,7 +116,7 @@ assign pop_struct_o  = pop_r;
 assign peek_data_o   = cell_r.data;
 
 pq_cell_fsm #(
-  .IW ( IW )
+  .TW ( TW )
 ) i_fsm (
   .clk_i         ( clk_i            ),
   .rst_ni        ( rst_ni           ),

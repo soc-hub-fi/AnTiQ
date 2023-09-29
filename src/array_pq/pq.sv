@@ -1,5 +1,5 @@
 /*
- * pq.sv - Systolic array priority queue supporting push, push & drop
+ * pq.sv - Top level module for AnTiQ priority queue
  * 
  * author(s): Antti Nurmi : antti.nurmi@tuni.fi
  */
@@ -7,30 +7,29 @@
 module pq 
   import pq_pkg::*;
 #(
-  parameter  DEPTH = QUEUE_DEPTH,
-  parameter  DW = DATA_WIDTH,
-  localparam CNT_WIDTH   = $clog2(DEPTH),
-  localparam ID_WIDTH    = CNT_WIDTH + 1     
+  parameter  DEPTH     = QUEUE_DEPTH,
+  parameter  TW        = TIME_WIDTH,
+  localparam CNT_WIDTH = $clog2(DEPTH)    
 )(
   input  logic                  clk_i,           
   input  logic                  rst_ni,          
   input  logic                  push_i,          
   input  logic                  pop_i,           
   input  logic                  drop_i,          
-  input  logic [  ID_WIDTH-1:0] drop_id_i,       
-  output logic [  ID_WIDTH-1:0] push_id_o,       
+  input  logic [        TW-1:0] drop_id_i,       
+  input  logic [        TW-1:0] push_id_i,       
   output logic                  push_rdy_o,      
   output logic                  pop_rdy_o,       
   output logic                  drop_rdy_o,      
   output logic                  full_o,          
   output logic                  empty_o,         
   output logic [ CNT_WIDTH-1:0] cnt_o,           
-  input  logic [        DW-1:0] data_i,          
-  output logic [        DW-1:0] data_o,          
+  input  logic [        TW-1:0] data_i,          
+  output logic [        TW-1:0] data_o,          
   output logic                  peek_vld_o,          
-  output logic [        DW-1:0] peek_data_o,          
+  output logic [        TW-1:0] peek_data_o,          
   output logic                  overflow_o,      
-  output logic [        DW-1:0] data_overflow_o 
+  output logic [        TW-1:0] data_overflow_o 
 );
 
 cell_t push_struct  [DEPTH-0:0];
@@ -46,36 +45,15 @@ logic  drop_vld     [DEPTH-0:0];
 
 logic  full         [DEPTH-1:0];
 logic  peek_vld     [DEPTH-1:0];
-logic [DW-1:0]      peek_data    [DEPTH-1:0];
+logic [ TW-1:0]      peek_data [DEPTH-1:0];
 
-logic [ ID_WIDTH-1:0] drop_id [DEPTH-0:0];
-logic [CNT_WIDTH-1:0] counter;
-logic [CNT_WIDTH-1:0] counter_r;
-
-always_ff @(posedge clk_i or negedge rst_ni)
-  begin : count
-    if (~rst_ni) 
-      counter_r <= '0;      
-    else
-      counter_r = counter;
-  end
-
-always_comb
-  begin : increment
-    if (push_i & push_vld[0])
-      counter = counter_r + 1;
-    else
-      counter = counter_r;
-  end
-  
-// make valid ids always non-zero
-assign push_id_o = (push_i) ? (counter_r << 1) + 1 : '0;
+logic [ TW-1:0]        drop_id [DEPTH-0:0];
 
 for (genvar ii=0; ii<DEPTH; ii++) 
   begin : cell_gen
     pq_cell #(
-      .DW ( DW       ),
-      .IW ( ID_WIDTH ),
+      .TW ( TW       ),
+      //.IW ( ID_WIDTH ),
       .ID ( ii )
     ) i_pq_cell (
       .clk_i         ( clk_i             ),
@@ -124,7 +102,7 @@ assign peek_data_o = peek_data[0];
 assign peek_vld_o  = peek_vld[0];
 
 assign push_struct[0].data = data_i;
-assign push_struct[0].id   = push_id_o;
+assign push_struct[0].id   = push_id_i;
 assign data_o              = pop_struct[0].data;
 assign pop_struct[DEPTH]   = '0;
 assign data_overflow_o     = push_struct[DEPTH].data;
