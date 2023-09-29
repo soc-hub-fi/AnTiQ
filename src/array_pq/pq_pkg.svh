@@ -9,9 +9,9 @@ package pq_pkg;
   localparam QUEUE_DEPTH = 8;
   localparam TIME_WIDTH  = 16;
   localparam CNT_WIDTH   = $clog2(QUEUE_DEPTH);
-  localparam TEST_OPS    = 5000;
-  localparam MAX_TIME    = 2**(TIME_WIDTH);
-  localparam DELTA_MAX   = 45;
+  localparam TEST_OPS    = 10000;
+  localparam longint unsigned MAX_TIME    = 2**(TIME_WIDTH);
+  localparam DELTA_MAX   = 20;
 
   typedef enum int { 
     PUSH, 

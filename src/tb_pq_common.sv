@@ -20,6 +20,7 @@ logic                  overflow;
 
 op_t ops;
 
+logic [TIME_WIDTH-1:0] rand_data;
 logic [TIME_WIDTH-1:0] unin_data;
 logic [TIME_WIDTH-1:0] rand_id;
 
@@ -141,17 +142,17 @@ initial begin
 
   for (int op = 0; op <= TEST_OPS; op++) begin 
     void'(randomize(      ops));
-    void'(randomize(delta_time) with { delta_time < DELTA_MAX; 
-                                       delta_time >         0; });
+    void'(randomize(delta_time) with { delta_time <  DELTA_MAX; });
+    void'(randomize(rand_data)  with { rand_data  != '0;        });
+    void'(randomize(rand_id)    with { rand_id    <  total_time;});
     total_time = base_time + delta_time;
-    void'(randomize(rand_id) with {rand_id < total_time;});
     case (ops)
       NOP: begin
         nop();
         nop_cnt++;
       end
       PUSH: begin
-        insert_val(total_time, base_time);
+        insert_val(rand_data, base_time);
         push_cnt++;
       end
       POP: begin
@@ -176,6 +177,9 @@ initial begin
     end
     base_time = total_time;
   end
+  $display("All %2d operations executed without errors. t_total %2d", 
+    TEST_OPS, total_time);
+  $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt);
   $finish;
 end
 
