@@ -18,17 +18,18 @@ logic [TIME_WIDTH-1:0] drop_id, push_id;
 logic [TIME_WIDTH-1:0] data_i, data_o, data_overflow, peek_data;    
 logic                  overflow;
 
-typedef enum int { PUSH, POP, NOP, DROP } op_t;
 op_t ops;
 
-logic [TIME_WIDTH-1:0] rand_data;
 logic [TIME_WIDTH-1:0] unin_data;
 logic [TIME_WIDTH-1:0] rand_id;
+
+int push_cnt, pop_cnt, drop_cnt, nop_cnt;
 
 longint unsigned  base_time = 1;
 byte    unsigned delta_time = 0;
 longint unsigned total_time = 0;
 
+// Golden reference for queue output
 cell_t golden_queue[$];
 
 task print_queue ();
@@ -66,6 +67,8 @@ task insert_val( logic [TIME_WIDTH-1:0] insert_data, logic [TIME_WIDTH-1:0] inse
   end
   $write("[PUSH] data:%4h, id:%4h ", insert_data, push_id);
   print_queue();
+  assert ((insert_data != '0) & (insert_id != '0))
+  else $fatal(1, "0 data or id inserted into queue!");
   #0;
 endtask
 
@@ -109,7 +112,6 @@ task drop_val( int dropped_id );
   while(~drop_rdy) begin
     @(posedge clk);
   end
-  //@(posedge clk);
   drop    =  0;
   drop_id = '0;
   print_queue();
@@ -138,34 +140,40 @@ initial begin
   #45;
 
   for (int op = 0; op <= TEST_OPS; op++) begin 
-    // TODO: random stimulus gen
     void'(randomize(      ops));
-    void'(randomize(delta_time) with { delta_time < 10; 
-                                       delta_time >  0; });
+    void'(randomize(delta_time) with { delta_time < DELTA_MAX; 
+                                       delta_time >         0; });
     total_time = base_time + delta_time;
-    void'(randomize(rand_data));
-    void'(randomize(  rand_id) with {rand_id < total_time;});
-    //$display("OP NUM:", op);
+    void'(randomize(rand_id) with {rand_id < total_time;});
     case (ops)
       NOP: begin
         nop();
+        nop_cnt++;
       end
       PUSH: begin
         insert_val(total_time, base_time);
+        push_cnt++;
       end
       POP: begin
         pop_val();
+        pop_cnt++;
       end
       DROP: begin
         drop_val(rand_id);
+        drop_cnt++;
       end 
       default: begin
         nop();
+        nop_cnt++;
       end 
     endcase
 
-    assert (total_time >= base_time + delta_time)
-    else $fatal(0, "Maximal monotonic time value reached, test ended. t_total %2d, t_base %2d, t_delta %2d", total_time, base_time, delta_time);
+    assert (MAX_TIME > base_time + delta_time) else begin 
+      $display("Maximal monotonic time value reached, test ended. t_max %2d t_total %2d, t_base %2d, t_delta %2d", 
+        MAX_TIME, total_time, base_time, delta_time);
+      $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt);
+      $finish;
+    end
     base_time = total_time;
   end
   $finish;
@@ -198,9 +206,9 @@ pq #(
   .data_overflow_o ( data_overflow )
 );
 
-always @(*) begin
+always @(*) begin : assertions
   // TODO: implement logic to check only one *_rdy can be high at a time
   //assert (drop_rdy | push_rdy | pop_rdy)
   //else $fatal(1, "Multiple top handshakes active!");
-  end
+end : assertions
 endmodule // tb_pq

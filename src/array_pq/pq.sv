@@ -1,5 +1,5 @@
 /*
- * pq.sv - Systolic array priority queue supporting push, push & drop
+ * pq.sv - Top level module for AnTiQ priority queue
  * 
  * author(s): Antti Nurmi : antti.nurmi@tuni.fi
  */
@@ -7,9 +7,9 @@
 module pq 
   import pq_pkg::*;
 #(
-  parameter  DEPTH = QUEUE_DEPTH,
-  parameter  TW = TIME_WIDTH,
-  localparam CNT_WIDTH   = $clog2(DEPTH)    
+  parameter  DEPTH     = QUEUE_DEPTH,
+  parameter  TW        = TIME_WIDTH,
+  localparam CNT_WIDTH = $clog2(DEPTH)    
 )(
   input  logic                  clk_i,           
   input  logic                  rst_ni,          

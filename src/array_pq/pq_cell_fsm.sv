@@ -1,5 +1,5 @@
 /*
- * pq_cell_fsm.sv - Finite state machine to control priority queue cells
+ * pq_cell_fsm.sv - AnTiQ cell control FSM instance
  * 
  * author(s): Antti Nurmi : antti.nurmi@tuni.fi
  */
@@ -104,7 +104,7 @@ always_comb
       EMPTY: begin
         if (curr_id_i == drop_id_i)
           in_sel_o = 2'b00;
-        if (push_i & pop_vld_i) begin
+        if (push_i & pop_vld_i & pop_comp_i) begin
           if (~pop_comp_i) begin
             in_sel_o      = 2'b01;
             out_sel_o     = 2'b01;

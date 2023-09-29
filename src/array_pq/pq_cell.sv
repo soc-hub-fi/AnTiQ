@@ -1,5 +1,5 @@
 /*
- * pq_cell.sv - Single priority queue cell replicated in pq.sv
+ * pq_cell.sv - AnTiQ cell instance
  * 
  * author(s): Antti Nurmi : antti.nurmi@tuni.fi
  */
@@ -52,8 +52,8 @@ logic       pop_bypass;
 
 logic curr_comp; // push.data higher priority than current
 logic pop_comp;  // push.data higher priority than pop_i
-assign curr_comp = ( push_struct_i.data < cell_r.data       ) ? 1 : 0;
-assign pop_comp  = ( push_struct_i.data < pop_struct_i.data ) ? 1 : 0;
+assign curr_comp = ( (push_struct_i.data < cell_r.data      ) | (cell_r.data       == '0)) ? 1 : 0;
+assign pop_comp  = ( (push_struct_i.data < pop_struct_i.data) | (pop_struct_i.data == '0)) ? 1 : 0;
 
 always_comb
   begin
