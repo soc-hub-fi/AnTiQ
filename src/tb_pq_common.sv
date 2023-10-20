@@ -24,7 +24,9 @@ logic [TIME_WIDTH-1:0] rand_data;
 logic [TIME_WIDTH-1:0] unin_data;
 logic [TIME_WIDTH-1:0] rand_id;
 
-int push_cnt, pop_cnt, drop_cnt, nop_cnt;
+int push_cnt, pop_cnt, drop_cnt, nop_cnt, drop_hit, drop_miss;
+
+int unsigned rand_idx;
 
 longint unsigned  base_time = 1;
 byte    unsigned delta_time = 0;
@@ -33,10 +35,15 @@ longint unsigned total_time = 0;
 // Golden reference for queue output
 cell_t golden_queue[$];
 
+function logic [TIME_WIDTH-1:0] get_valid_queue_id();
+  void'(randomize(rand_idx) with { rand_idx <  QUEUE_DEPTH; });
+  return golden_queue[rand_idx].id;
+endfunction
+
 task print_queue ();
   $write("time: %06t queue:", $time);
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    $write("[%4h:%4h]", golden_queue[it].data,golden_queue[it].id);
+    $write("[%6h:%6h]", golden_queue[it].data,golden_queue[it].id);
   end
   $write(" q_size: %2d", golden_queue.size());
   $write("\n");
@@ -66,7 +73,7 @@ task insert_val( logic [TIME_WIDTH-1:0] insert_data, logic [TIME_WIDTH-1:0] inse
     golden_queue.push_back(tmp);
     golden_queue.sort();
   end
-  $write("[PUSH] data:%4h, id:%4h ", insert_data, push_id);
+  $write("[PUSH] data:%6h, id:%6h ", insert_data, push_id);
   print_queue();
   assert ((insert_data != '0) & (insert_id != '0))
   else $fatal(1, "0 data or id inserted into queue!");
@@ -79,13 +86,16 @@ task pop_val();
     pop    =  1;
     @(negedge clk);
     tmp = golden_queue.pop_front();
-    $write("[POP ] data:%4h, id:%4h ", tmp.data, tmp.id);
+    $write("[POP ] data:%6h, id:%6h ", tmp.data, tmp.id);
     while(~pop_rdy) begin
       @(negedge clk);
     end
     assert (data_o == tmp.data) 
-    else   $fatal(1, "pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
-    @(posedge clk);
+    else begin
+      if(tmp.data != 'X | data_o != '0)
+        $fatal(1, "pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
+    end
+      @(posedge clk);
     pop   =  0;
     #0;
     print_queue();
@@ -99,12 +109,15 @@ task drop_val( int dropped_id );
   drop_id = dropped_id;
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
     if(golden_queue[it].id == dropped_id) begin
-      $write("[DROP] data:%4h, id:%4h ",golden_queue[it].data, golden_queue[it].id);
+      $write("[DROP] data:%6h, id:%6h ",golden_queue[it].data, golden_queue[it].id);
+      drop_hit++;
       found = 1;
     end
   end
-  if (~found)
-    $write("[DROP] data:%4h, id:%4h ",unin_data, dropped_id);
+  if (~found) begin
+    $write("[DROP] data:%6h, id:%6h ",unin_data, dropped_id);
+    drop_miss++;    
+  end
   for (int it = 0; it<golden_queue.size(); it++)
     if (golden_queue[it].id == dropped_id) begin
       golden_queue.delete(it--);
@@ -122,7 +135,7 @@ endtask
 task nop();
   @(negedge clk);
   @(posedge clk);
-  $write("[NOP ]\t\t    ");
+  $write("[NOP ]\t\t        ");
   print_queue();
 endtask
 
@@ -160,6 +173,10 @@ initial begin
         pop_cnt++;
       end
       DROP: begin
+        drop_val(get_valid_queue_id());
+        drop_cnt++;
+      end
+      DROP_RAND: begin
         drop_val(rand_id);
         drop_cnt++;
       end 
@@ -172,7 +189,8 @@ initial begin
     assert (MAX_TIME > base_time + delta_time) else begin 
       $display("Maximal monotonic time value reached, test ended. t_max %2d t_total %2d, t_base %2d, t_delta %2d", 
         MAX_TIME, total_time, base_time, delta_time);
-      $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt);
+      $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d, total %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt, push_cnt+pop_cnt+drop_cnt+nop_cnt);
+      $display("Drop hits:%2d, misses:%2d, hit percentage: %2d", drop_hit, drop_miss, (drop_hit/drop_cnt)*100);
       $finish;
     end
     base_time = total_time;
