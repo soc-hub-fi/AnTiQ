@@ -24,6 +24,14 @@ verilate:
 	cd $(BUILD_DIR)/verilator
 	./scripts/verilate.sh
 
+.PHONY: verilator-run
+verilator-run:
+	./obj_dir/Vpq
+
+.PHONY: verilator-gui
+verilator-gui:
+	gtkwave waveform.vcd
+
 .PHONY: elaboration
 elaboration: check-env
 	cd $(BUILD_DIR)
