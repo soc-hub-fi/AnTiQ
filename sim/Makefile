@@ -56,3 +56,4 @@ sanity:
 .PHONY: clean
 clean:
 	rm -fr $(BUILD_DIR)/pq_lib
+	rm -fr $(BUILD_DIR)/obj_dir
