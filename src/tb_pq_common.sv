@@ -36,8 +36,12 @@ longint unsigned total_time = 0;
 cell_t golden_queue[$];
 
 function logic [TIME_WIDTH-1:0] get_valid_queue_id();
-  void'(randomize(rand_idx) with { rand_idx <  QUEUE_DEPTH; });
-  return golden_queue[rand_idx].id;
+  void'(randomize(rand_idx) with { rand_idx <  golden_queue.size(); });
+  //$display("IN FUNCTION");
+  if(golden_queue.size() == 0) // give non-zero value in case of empty queue
+    return 'hBADCAB;
+  else
+    return golden_queue[rand_idx].id;
 endfunction
 
 task print_queue ();
@@ -73,8 +77,10 @@ task insert_val( logic [TIME_WIDTH-1:0] insert_data, logic [TIME_WIDTH-1:0] inse
     golden_queue.push_back(tmp);
     golden_queue.sort();
   end
-  $write("[PUSH] data:%6h, id:%6h ", insert_data, push_id);
-  print_queue();
+  if(VERBOSE) begin
+    $write("[PUSH  ] data:%6h, id:%6h ", insert_data, push_id);
+    print_queue();
+  end
   assert ((insert_data != '0) & (insert_id != '0))
   else $fatal(1, "0 data or id inserted into queue!");
   #0;
@@ -86,7 +92,8 @@ task pop_val();
     pop    =  1;
     @(negedge clk);
     tmp = golden_queue.pop_front();
-    $write("[POP ] data:%6h, id:%6h ", tmp.data, tmp.id);
+    if (VERBOSE)
+      $write("[POP   ] data:%6h, id:%6h ", tmp.data, tmp.id);
     while(~pop_rdy) begin
       @(negedge clk);
     end
@@ -98,7 +105,8 @@ task pop_val();
       @(posedge clk);
     pop   =  0;
     #0;
-    print_queue();
+    if (VERBOSE)
+      print_queue();
   end
 endtask
 
@@ -108,15 +116,18 @@ task drop_val( int dropped_id );
   drop    = 1;
   drop_id = dropped_id;
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
+    @(posedge clk);
     if(golden_queue[it].id == dropped_id) begin
-      $write("[DROP] data:%6h, id:%6h ",golden_queue[it].data, golden_queue[it].id);
+      if (VERBOSE)
+        $write("[DROP_H] data:%6h, id:%6h ",golden_queue[it].data, golden_queue[it].id);
       drop_hit++;
       found = 1;
     end
   end
   if (~found) begin
-    $write("[DROP] data:%6h, id:%6h ",unin_data, dropped_id);
-    drop_miss++;    
+    if (VERBOSE)
+      $write("[DROP_M] data:%6h, id:%6h ",unin_data, dropped_id);
+    drop_miss++;
   end
   for (int it = 0; it<golden_queue.size(); it++)
     if (golden_queue[it].id == dropped_id) begin
@@ -128,15 +139,18 @@ task drop_val( int dropped_id );
   end
   drop    =  0;
   drop_id = '0;
-  print_queue();
+  if (VERBOSE)
+    print_queue();
   #0;
 endtask
 
 task nop();
   @(negedge clk);
   @(posedge clk);
-  $write("[NOP ]\t\t        ");
-  print_queue();
+  if (VERBOSE) begin
+    $write("[NOP   ]\t\t          ");
+    print_queue();
+  end
 endtask
 
 initial begin
@@ -155,7 +169,8 @@ initial begin
 
   for (int op = 0; op <= TEST_OPS; op++) begin 
     void'(randomize(      ops));
-    void'(randomize(delta_time) with { delta_time <  DELTA_MAX; });
+    void'(randomize(delta_time) with { delta_time <  DELTA_MAX;
+                                       delta_time > 1;          });
     void'(randomize(rand_data)  with { rand_data  != '0;        });
     void'(randomize(rand_id)    with { rand_id    <  total_time;});
     total_time = base_time + delta_time;
@@ -189,8 +204,8 @@ initial begin
     assert (MAX_TIME > base_time + delta_time) else begin 
       $display("Maximal monotonic time value reached, test ended. t_max %2d t_total %2d, t_base %2d, t_delta %2d", 
         MAX_TIME, total_time, base_time, delta_time);
-      $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d, total %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt, push_cnt+pop_cnt+drop_cnt+nop_cnt);
-      $display("Drop hits:%2d, misses:%2d, hit percentage: %2d", drop_hit, drop_miss, (drop_hit/drop_cnt)*100);
+      $display("OPERATION COUNT: PUSH %2d, POP %2d, DROP %2d, NOP %2d, TOTAL %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt, push_cnt+pop_cnt+drop_cnt+nop_cnt);
+      $display("DROP hits:%2d, misses:%2d, hit percentage: %2d", drop_hit, drop_miss, (drop_hit*100)/drop_cnt);
       $finish;
     end
     base_time = total_time;
@@ -198,6 +213,7 @@ initial begin
   $display("All %2d operations executed without errors. t_total %2d", 
     TEST_OPS, total_time);
   $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt);
+  $display("DROP hits:%2d, misses:%2d, hit percentage: %2d", drop_hit, drop_miss, (drop_hit*100)/drop_cnt);
   $finish;
 end
 
@@ -232,5 +248,7 @@ always @(*) begin : assertions
   // TODO: implement logic to check only one *_rdy can be high at a time
   //assert (drop_rdy | push_rdy | pop_rdy)
   //else $fatal(1, "Multiple top handshakes active!");
+  assert (!(drop & drop_id == '0)) 
+  else   $fatal(1, "Attemted to drop reserved ID 0!");
 end : assertions
 endmodule // tb_pq
