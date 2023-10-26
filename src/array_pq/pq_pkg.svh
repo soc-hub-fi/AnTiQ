@@ -11,7 +11,7 @@ package pq_pkg;
   localparam CNT_WIDTH                  = $clog2(QUEUE_DEPTH);
   localparam TEST_OPS                   = 1000000;
   localparam longint unsigned MAX_TIME  = 2**(TIME_WIDTH);
-  localparam DELTA_MAX                  = 100;
+  localparam DELTA_MAX                  = 20;
   localparam VERBOSE                    = 0;
 
   typedef enum int { 

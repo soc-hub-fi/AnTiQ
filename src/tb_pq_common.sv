@@ -37,9 +37,8 @@ cell_t golden_queue[$];
 
 function logic [TIME_WIDTH-1:0] get_valid_queue_id();
   void'(randomize(rand_idx) with { rand_idx <  golden_queue.size(); });
-  //$display("IN FUNCTION");
   if(golden_queue.size() == 0) // give non-zero value in case of empty queue
-    return 'hBADCAB;
+    return 'hBA15AC;
   else
     return golden_queue[rand_idx].id;
 endfunction
@@ -171,8 +170,10 @@ initial begin
     void'(randomize(      ops));
     void'(randomize(delta_time) with { delta_time <  DELTA_MAX;
                                        delta_time > 1;          });
+    void'(randomize(rand_id)    with { rand_id    <  total_time;
+                                       rand_id    > 1;          });
     void'(randomize(rand_data)  with { rand_data  != '0;        });
-    void'(randomize(rand_id)    with { rand_id    <  total_time;});
+    void'(randomize(rand_data)  with { rand_data  != '0;        });
     total_time = base_time + delta_time;
     case (ops)
       NOP: begin
@@ -244,11 +245,12 @@ pq #(
   .data_overflow_o ( data_overflow )
 );
 
-always @(*) begin : assertions
+always @(*) begin : async_assertions
   // TODO: implement logic to check only one *_rdy can be high at a time
   //assert (drop_rdy | push_rdy | pop_rdy)
   //else $fatal(1, "Multiple top handshakes active!");
   assert (!(drop & drop_id == '0)) 
   else   $fatal(1, "Attemted to drop reserved ID 0!");
-end : assertions
+end : async_assertions
+
 endmodule // tb_pq
