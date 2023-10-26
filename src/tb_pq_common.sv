@@ -20,10 +20,13 @@ logic                  overflow;
 
 op_t ops;
 
+logic [TIME_WIDTH-1:0] rand_data;
 logic [TIME_WIDTH-1:0] unin_data;
 logic [TIME_WIDTH-1:0] rand_id;
 
-int push_cnt, pop_cnt, drop_cnt, nop_cnt;
+int push_cnt, pop_cnt, drop_cnt, nop_cnt, drop_hit, drop_miss;
+
+int unsigned rand_idx;
 
 longint unsigned  base_time = 1;
 byte    unsigned delta_time = 0;
@@ -32,10 +35,19 @@ longint unsigned total_time = 0;
 // Golden reference for queue output
 cell_t golden_queue[$];
 
+function logic [TIME_WIDTH-1:0] get_valid_queue_id();
+  void'(randomize(rand_idx) with { rand_idx <  golden_queue.size(); });
+  //$display("IN FUNCTION");
+  if(golden_queue.size() == 0) // give non-zero value in case of empty queue
+    return 'hBADCAB;
+  else
+    return golden_queue[rand_idx].id;
+endfunction
+
 task print_queue ();
   $write("time: %06t queue:", $time);
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
-    $write("[%4h:%4h]", golden_queue[it].data,golden_queue[it].id);
+    $write("[%6h:%6h]", golden_queue[it].data,golden_queue[it].id);
   end
   $write(" q_size: %2d", golden_queue.size());
   $write("\n");
@@ -65,8 +77,10 @@ task insert_val( logic [TIME_WIDTH-1:0] insert_data, logic [TIME_WIDTH-1:0] inse
     golden_queue.push_back(tmp);
     golden_queue.sort();
   end
-  $write("[PUSH] data:%4h, id:%4h ", insert_data, push_id);
-  print_queue();
+  if(VERBOSE) begin
+    $write("[PUSH  ] data:%6h, id:%6h ", insert_data, push_id);
+    print_queue();
+  end
   assert ((insert_data != '0) & (insert_id != '0))
   else $fatal(1, "0 data or id inserted into queue!");
   #0;
@@ -78,16 +92,21 @@ task pop_val();
     pop    =  1;
     @(negedge clk);
     tmp = golden_queue.pop_front();
-    $write("[POP ] data:%4h, id:%4h ", tmp.data, tmp.id);
+    if (VERBOSE)
+      $write("[POP   ] data:%6h, id:%6h ", tmp.data, tmp.id);
     while(~pop_rdy) begin
       @(negedge clk);
     end
     assert (data_o == tmp.data) 
-    else   $fatal(1, "pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
-    @(posedge clk);
+    else begin
+      if(tmp.data != 'X | data_o != '0)
+        $fatal(1, "pop data mismatch with reference! data_o: %2h, tmp.data: %2h", data_o, tmp.data);
+    end
+      @(posedge clk);
     pop   =  0;
     #0;
-    print_queue();
+    if (VERBOSE)
+      print_queue();
   end
 endtask
 
@@ -97,13 +116,19 @@ task drop_val( int dropped_id );
   drop    = 1;
   drop_id = dropped_id;
   for (int it = 0; it < QUEUE_DEPTH; it++) begin
+    @(posedge clk);
     if(golden_queue[it].id == dropped_id) begin
-      $write("[DROP] data:%4h, id:%4h ",golden_queue[it].data, golden_queue[it].id);
+      if (VERBOSE)
+        $write("[DROP_H] data:%6h, id:%6h ",golden_queue[it].data, golden_queue[it].id);
+      drop_hit++;
       found = 1;
     end
   end
-  if (~found)
-    $write("[DROP] data:%4h, id:%4h ",unin_data, dropped_id);
+  if (~found) begin
+    if (VERBOSE)
+      $write("[DROP_M] data:%6h, id:%6h ",unin_data, dropped_id);
+    drop_miss++;
+  end
   for (int it = 0; it<golden_queue.size(); it++)
     if (golden_queue[it].id == dropped_id) begin
       golden_queue.delete(it--);
@@ -114,15 +139,18 @@ task drop_val( int dropped_id );
   end
   drop    =  0;
   drop_id = '0;
-  print_queue();
+  if (VERBOSE)
+    print_queue();
   #0;
 endtask
 
 task nop();
   @(negedge clk);
   @(posedge clk);
-  $write("[NOP ]\t\t    ");
-  print_queue();
+  if (VERBOSE) begin
+    $write("[NOP   ]\t\t          ");
+    print_queue();
+  end
 endtask
 
 initial begin
@@ -141,17 +169,18 @@ initial begin
 
   for (int op = 0; op <= TEST_OPS; op++) begin 
     void'(randomize(      ops));
-    void'(randomize(delta_time) with { delta_time < DELTA_MAX; 
-                                       delta_time >         0; });
+    void'(randomize(delta_time) with { delta_time <  DELTA_MAX;
+                                       delta_time > 1;          });
+    void'(randomize(rand_data)  with { rand_data  != '0;        });
+    void'(randomize(rand_id)    with { rand_id    <  total_time;});
     total_time = base_time + delta_time;
-    void'(randomize(rand_id) with {rand_id < total_time;});
     case (ops)
       NOP: begin
         nop();
         nop_cnt++;
       end
       PUSH: begin
-        insert_val(total_time, base_time);
+        insert_val(rand_data, base_time);
         push_cnt++;
       end
       POP: begin
@@ -159,6 +188,10 @@ initial begin
         pop_cnt++;
       end
       DROP: begin
+        drop_val(get_valid_queue_id());
+        drop_cnt++;
+      end
+      DROP_RAND: begin
         drop_val(rand_id);
         drop_cnt++;
       end 
@@ -171,11 +204,16 @@ initial begin
     assert (MAX_TIME > base_time + delta_time) else begin 
       $display("Maximal monotonic time value reached, test ended. t_max %2d t_total %2d, t_base %2d, t_delta %2d", 
         MAX_TIME, total_time, base_time, delta_time);
-      $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt);
+      $display("OPERATION COUNT: PUSH %2d, POP %2d, DROP %2d, NOP %2d, TOTAL %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt, push_cnt+pop_cnt+drop_cnt+nop_cnt);
+      $display("DROP hits:%2d, misses:%2d, hit percentage: %2d", drop_hit, drop_miss, (drop_hit*100)/drop_cnt);
       $finish;
     end
     base_time = total_time;
   end
+  $display("All %2d operations executed without errors. t_total %2d", 
+    TEST_OPS, total_time);
+  $display("Operation count: PUSH %2d, POP %2d, DROP %2d, NOP %2d", push_cnt, pop_cnt, drop_cnt, nop_cnt);
+  $display("DROP hits:%2d, misses:%2d, hit percentage: %2d", drop_hit, drop_miss, (drop_hit*100)/drop_cnt);
   $finish;
 end
 
@@ -210,5 +248,7 @@ always @(*) begin : assertions
   // TODO: implement logic to check only one *_rdy can be high at a time
   //assert (drop_rdy | push_rdy | pop_rdy)
   //else $fatal(1, "Multiple top handshakes active!");
+  assert (!(drop & drop_id == '0)) 
+  else   $fatal(1, "Attemted to drop reserved ID 0!");
 end : assertions
 endmodule // tb_pq

@@ -9,7 +9,9 @@ module pq
 #(
   parameter  DEPTH     = QUEUE_DEPTH,
   parameter  TW        = TIME_WIDTH,
-  localparam CNT_WIDTH = $clog2(DEPTH)    
+  // verilator lint_off VARHIDDEN
+  localparam CNT_WIDTH = $clog2(DEPTH)
+  // verilator lint_on VARHIDDEN
 )(
   input  logic                  clk_i,           
   input  logic                  rst_ni,          
@@ -72,9 +74,9 @@ for (genvar ii=0; ii<DEPTH; ii++)
       .pop_o         ( pop [ii+1]        ),
       .drop_o        ( drop[ii+1]        ),
       .drop_id_o     ( drop_id [ii+1]    ),
-      .push_vld_i    ( push_vld[ii+1]    ),
+      //.push_vld_i    ( push_vld[ii+1]    ),
       .pop_vld_i     ( pop_vld [ii+1]    ),
-      .drop_vld_i    ( drop_vld[ii+1]    ),
+      //.drop_vld_i    ( drop_vld[ii+1]    ),
       .push_struct_i ( push_struct[ii]   ),
       .pop_struct_o  ( pop_struct [ii]   ),
       .push_struct_o ( push_struct[ii+1] ),

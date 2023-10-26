@@ -31,9 +31,9 @@ module pq_cell
   output logic          pop_o,
   output logic          drop_o,
   output logic [TW-1:0] drop_id_o,
-  input  logic          push_vld_i,
+  //input  logic          push_vld_i,
   input  logic          pop_vld_i,
-  input  logic          drop_vld_i,
+  //input  logic          drop_vld_i,
   output cell_t         push_struct_o,
   input  cell_t         pop_struct_i
 );
@@ -131,9 +131,9 @@ pq_cell_fsm #(
   .push_o        ( push_o           ),
   .pop_o         ( pop_o            ),
   .drop_o        ( drop_o           ),
-  .push_vld_i    ( push_vld_i       ),
+  //.push_vld_i    ( push_vld_i       ),
   .pop_vld_i     ( pop_vld_i        ),
-  .drop_vld_i    ( drop_vld_i       ),
+  //.drop_vld_i    ( drop_vld_i       ),
   .push_bypass_o ( push_bypass      ),
   .pop_bypass_o  ( pop_bypass       ),
   .full_o        ( full_o           ),

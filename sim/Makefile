@@ -19,6 +19,19 @@ compile: check-env
 	-sv -f pq_files.list \
 	-l $(BUILD_DIR)/logs/compile/pq.log
 
+.PHONY: verilate
+verilate:
+	cd $(BUILD_DIR)/verilator
+	./scripts/verilate.sh
+
+.PHONY: verilator-run
+verilator-run:
+	./obj_dir/Vpq
+
+.PHONY: verilator-gui
+verilator-gui:
+	gtkwave waveform.vcd
+
 .PHONY: elaboration
 elaboration: check-env
 	cd $(BUILD_DIR)
@@ -51,3 +64,4 @@ sanity:
 .PHONY: clean
 clean:
 	rm -fr $(BUILD_DIR)/pq_lib
+	rm -fr $(BUILD_DIR)/obj_dir
