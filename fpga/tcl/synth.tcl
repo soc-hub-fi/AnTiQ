@@ -27,6 +27,7 @@ set TOP pq_fpga_top
 set CONSTR_FILE ${FPGA_XDC_DIR}/pq_fpga.xdc
 set SRC_FILES   " \
   ${FPGA_RTL_DIR}/pq_fpga_pkg.svh \
+  ${SRC_DIR}/array_pq/pq_pkg.svh \
   ${SRC_DIR}/array_pq/pq_cell.sv \
   ${SRC_DIR}/array_pq/pq_cell_fsm.sv \
   ${SRC_DIR}/array_pq/pq.sv \

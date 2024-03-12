@@ -4,7 +4,7 @@ module pq_fpga_top
   parameter  DEPTH = QUEUE_DEPTH,
   parameter  DW = DATA_WIDTH,
   localparam CNT_WIDTH   = $clog2(DEPTH),
-  localparam ID_WIDTH    = CNT_WIDTH + 1     
+  localparam ID_WIDTH    = CNT_WIDTH + 1
 )(
   input  logic                  clk_i_p,
   input  logic                  clk_i_n,           
@@ -44,7 +44,7 @@ module pq_fpga_top
   // design instance
   pq #(
     .DEPTH (DEPTH),       
-    .DW    (DW   )    
+    .TW    (DW   )    
   ) i_pq (
     .clk_i           (gen_clk_s       ),          
     .rst_ni          (int_rst_n_s     ),           
