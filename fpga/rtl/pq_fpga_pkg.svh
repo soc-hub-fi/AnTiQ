@@ -9,7 +9,7 @@
 package pq_pkg;
 
   localparam QUEUE_DEPTH = `Q_DEPTH;
-  localparam DATA_WIDTH  = `D_WIDTH;
+  localparam TIME_WIDTH  = `D_WIDTH;
   localparam CNT_WIDTH   = $clog2(QUEUE_DEPTH);
   localparam ID_WIDTH    = CNT_WIDTH + 1;
 
