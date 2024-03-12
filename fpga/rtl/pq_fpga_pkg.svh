@@ -14,7 +14,7 @@ package pq_pkg;
   localparam ID_WIDTH    = CNT_WIDTH + 1;
 
   typedef struct packed {
-    logic [DATA_WIDTH-1:0] data;
+    logic [TIME_WIDTH-1:0] data;
     logic [  ID_WIDTH-1:0] id;
   } cell_t;
 
