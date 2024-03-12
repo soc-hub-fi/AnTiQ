@@ -9,12 +9,12 @@
 package pq_pkg;
 
   localparam QUEUE_DEPTH = `Q_DEPTH;
-  localparam DATA_WIDTH  = `D_WIDTH;
+  localparam TIME_WIDTH  = `D_WIDTH;
   localparam CNT_WIDTH   = $clog2(QUEUE_DEPTH);
   localparam ID_WIDTH    = CNT_WIDTH + 1;
 
   typedef struct packed {
-    logic [DATA_WIDTH-1:0] data;
+    logic [TIME_WIDTH-1:0] data;
     logic [  ID_WIDTH-1:0] id;
   } cell_t;
 

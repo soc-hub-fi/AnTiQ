@@ -33,7 +33,7 @@ set SRC_FILES   " \
   ${FPGA_RTL_DIR}/pq_fpga_top.sv \
 "
 # data widths and queue depths
-set DATA_WIDTH  [list 8 16 32 64]
+set TIME_WIDTH  [list 8 16 32 64]
 set QUEUE_DEPTH [list 32 64 128 256]
 # IP instance names
 set IP_CLK_WIZ_NAME "i_clk_gen"
@@ -64,7 +64,7 @@ set_property top ${TOP} [current_fileset]
 set_property is_global_include 1 [get_files ${FPGA_RTL_DIR}/pq_fpga_pkg.svh]
 
 # increment through differe Data Width and Queue Depth values, perform synth and write util report
-foreach d_width ${DATA_WIDTH} {
+foreach d_width ${TIME_WIDTH} {
   foreach q_depth ${QUEUE_DEPTH} {
 
     set SYNTH_RUN "syn_dwidth_${d_width}_qdepth_${q_depth}"
