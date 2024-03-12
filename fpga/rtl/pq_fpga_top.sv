@@ -13,19 +13,19 @@ module pq_fpga_top
   input  logic                  pop_i,
   input  logic                  drop_i,
   input  logic [  ID_WIDTH-1:0] drop_id_i,
-  output logic [  ID_WIDTH-1:0] push_id_o,
+  input  logic [  ID_WIDTH-1:0] push_id_i,
   output logic                  push_rdy_o,
   output logic                  pop_rdy_o,
   output logic                  drop_rdy_o,
   output logic                  full_o,
   output logic                  empty_o,
   output logic [ CNT_WIDTH-1:0] cnt_o,
-  input  logic [        DW-1:0] data_i,
-  output logic [        DW-1:0] data_o,
+  input  logic [        TW-1:0] data_i,
+  output logic [        TW-1:0] data_o,
   output logic                  peek_vld_o,
-  output logic [        DW-1:0] peek_data_o,
+  output logic [        TW-1:0] peek_data_o,
   output logic                  overflow_o,
-  output logic [        DW-1:0] data_overflow_o
+  output logic [        TW-1:0] data_overflow_o
 );
 
   logic int_reset_s;
@@ -52,7 +52,7 @@ module pq_fpga_top
     .pop_i           (pop_i           ),
     .drop_i          (drop_i          ),
     .drop_id_i       (drop_id_i       ),
-    .push_id_o       (push_id_o       ),
+    .push_id_i       (push_id_i       ),
     .push_rdy_o      (push_rdy_o      ),
     .pop_rdy_o       (pop_rdy_o       ),
     .drop_rdy_o      (drop_rdy_o      ),
