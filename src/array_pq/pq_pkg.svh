@@ -8,6 +8,7 @@ package pq_pkg;
 
   localparam QUEUE_DEPTH                = 16;
   localparam TIME_WIDTH                 = 24;
+  localparam PAYLOAD_WIDTH              = 8;
   localparam CNT_WIDTH                  = $clog2(QUEUE_DEPTH);
   localparam TEST_OPS                   = 1000000;
   localparam longint unsigned MAX_TIME  = 2**(TIME_WIDTH);
@@ -23,8 +24,9 @@ package pq_pkg;
   } op_t;
 
   typedef struct packed {
-    logic [TIME_WIDTH-1:0] data;
-    logic [TIME_WIDTH-1:0] id;
+    logic [   TIME_WIDTH-1:0] data;
+    logic [   TIME_WIDTH-1:0] id;
+    logic [PAYLOAD_WIDTH-1:0] payload;
   } cell_t;
 
 endpackage
