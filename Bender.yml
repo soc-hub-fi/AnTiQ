@@ -2,7 +2,7 @@
 # https://github.com/pulp-platform/bender#manifest-format-benderyml
 
 package:
-  name: AnTiQ
+  name: antiq
   authors:
     - "Antti Nurmi <antti.nurmi@tuni.fi>"
 
