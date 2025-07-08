@@ -1,0 +1,14 @@
+# A more detailed description of the manifest format `Bender.yml` can be found here:
+# https://github.com/pulp-platform/bender#manifest-format-benderyml
+
+package:
+  name: AnTiQ
+  authors:
+    - "Antti Nurmi <antti.nurmi@tuni.fi>"
+
+dependencies:
+
+sources:
+  - files:
+    - src/array_pq/pq.sv
+    - src/apb_antiq.sv
