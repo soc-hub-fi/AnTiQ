@@ -29,6 +29,7 @@ module pq
   output logic [ CNT_WIDTH-1:0] cnt_o,           
   input  logic [        TW-1:0] data_i,          
   output logic [        TW-1:0] data_o,
+  input  logic [        PW-1:0] payload_i,
   output logic [        PW-1:0] payload_o,
   output logic                  peek_vld_o,          
   output logic [        TW-1:0] peek_data_o,          
@@ -105,8 +106,9 @@ assign empty_o     = ~full[0];
 assign peek_data_o = peek_data[0];
 assign peek_vld_o  = peek_vld[0];
 
-assign push_struct[0].data = data_i;
-assign push_struct[0].id   = push_id_i;
+assign push_struct[0].data    = data_i;
+assign push_struct[0].id      = push_id_i;
+assign push_struct[0].payload = payload_i;
 assign data_o              = pop_struct[0].data;
 assign payload_o           = pop_struct[0].payload;
 assign pop_struct[DEPTH]   = '0;
