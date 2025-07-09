@@ -9,9 +9,13 @@ package:
 dependencies:
 
 sources:
-  - files:
+  - target: antiq_legacy
+    files:
     - src/array_pq/pq_pkg.svh
     - src/array_pq/pq_cell_fsm.sv
     - src/array_pq/pq_cell.sv
     - src/array_pq/pq.sv
+  - target: not(antiq_legacy)
+    files:
+    - src/priority_queue.sv
     - src/apb_antiq.sv

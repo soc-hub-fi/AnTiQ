@@ -87,6 +87,26 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
   end
 end
 
+priority_queue #(
+  .Depth        (Depth),
+  .TimeWidth    (TimestampWidth),
+  .PayloadWidth (PayloadWidth)
+) i_pq (
+  .clk_i,
+  .rst_ni,
+  .full_o      (full),
+  .empty_o     (empty),
+  .push_i      (push),
+  .pop_i       (pop),
+  .drop_i      (drop),
+  .push_id_i   (ts_id),
+  .push_data_i (ts_push),
+  .payload_o   (pop_payload),
+  .payload_i   (push_payload),
+  .peek_data_o (ts_peek)
+);
+
+/*
 pq #(
   .DEPTH (Depth),
   .TW    (TimestampWidth),
@@ -114,6 +134,7 @@ pq #(
   .overflow_o      (),
   .data_overflow_o ()
 );
+*/
 
 endmodule : apb_antiq
 
