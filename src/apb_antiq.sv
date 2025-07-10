@@ -28,6 +28,13 @@ assign reg_status_d = {23'h0, empty, 7'h0, full};
 
 assign pop = (ts_peek <= mtime_i[TimestampWidth-1:0]) & ~empty;
 
+always_comb begin : irq_decoder
+  irqs_o = Depth'('0);
+  for (int i=0; i<Depth; i++) begin
+    if ((i == pop_payload) & pop) irqs_o[i] = 1'b1;
+  end
+end
+
 always_comb begin : apb_demux
 
   apb_sbr.prdata = 32'h0;
@@ -65,9 +72,14 @@ always_comb begin : tq_ctrl
         push         = 1'b1;
         ts_push      = mtime_i[TimestampWidth-1:0] + apb_sbr.pwdata[TimestampWidth-1:0];
         ts_id        = mtime_i[TimestampWidth-1:0];
+        reg_last_d   = mtime_i[TimestampWidth-1:0];
         push_payload = apb_sbr.pwdata[(PayloadWidth + 24)-1:24];
       end
       8'h0C: begin // PUSH_ABS
+        push         = 1'b1;
+        ts_push      = apb_sbr.pwdata[TimestampWidth-1:0];
+        reg_last_d   = mtime_i[TimestampWidth-1:0];
+        push_payload = apb_sbr.pwdata[(PayloadWidth + 24)-1:24];
       end
       8'h10: begin // DROP
       end
@@ -94,16 +106,16 @@ priority_queue #(
 ) i_pq (
   .clk_i,
   .rst_ni,
-  .full_o      (full),
-  .empty_o     (empty),
-  .push_i      (push),
-  .pop_i       (pop),
-  .drop_i      (drop),
-  .push_id_i   (ts_id),
-  .push_data_i (ts_push),
-  .payload_o   (pop_payload),
-  .payload_i   (push_payload),
-  .peek_data_o (ts_peek)
+  .full_o          (full),
+  .empty_o         (empty),
+  .push_i          (push),
+  .pop_i           (pop),
+  .drop_i          (drop),
+  .push_insert_i   (ts_id),
+  .push_dispatch_i (ts_push),
+  .payload_o       (pop_payload),
+  .payload_i       (push_payload),
+  .peek_data_o     (ts_peek)
 );
 
 /*

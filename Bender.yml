@@ -17,5 +17,6 @@ sources:
     - src/array_pq/pq.sv
   - target: not(antiq_legacy)
     files:
+    - src/binary_tree.sv
     - src/priority_queue.sv
     - src/apb_antiq.sv
