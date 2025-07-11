@@ -6,6 +6,7 @@ module apb_antiq #(
   input  logic             rst_ni,
   input  logic      [63:0] mtime_i,
   output logic [Depth-1:0] irqs_o,
+  output logic             irq_full_o,
   APB.Slave                apb_sbr
 );
 
@@ -13,9 +14,10 @@ localparam int unsigned TimestampWidth = 24;
 localparam int unsigned PayloadWidth   = $clog2(Depth);
 
 logic               [31:0] reg_status_q, reg_status_d;
-logic               [31:0] reg_last_q, reg_last_d;
-logic [TimestampWidth-1:0] ts_peek, ts_push, ts_id;
-logic [  PayloadWidth-1:0] pop_payload, push_payload;
+logic   [PayloadWidth-1:0] reg_last_q, reg_last_d;
+logic [TimestampWidth-1:0] ts_peek, ts_push;
+logic   [PayloadWidth-1:0] ptr_drop, ptr_top, ptr_last;
+logic   [PayloadWidth-1:0] pop_payload, push_payload;
 logic                      full, empty;
 logic                      push, pop, drop;
 logic                      apb_write, apb_read;
@@ -24,9 +26,15 @@ assign apb_write = apb_sbr.psel & apb_sbr.penable &  apb_sbr.pwrite;
 assign apb_read  = apb_sbr.psel & apb_sbr.penable & ~apb_sbr.pwrite;
 
 assign apb_sbr.pready = apb_sbr.psel & apb_sbr.penable;
-assign reg_status_d = {23'h0, empty, 7'h0, full};
+
+logic [7:0] status_top;
+assign status_top = PayloadWidth'(ptr_top);
+assign reg_status_d = {status_top ,15'h0, empty, 7'h0, full};
 
 assign pop = (ts_peek <= mtime_i[TimestampWidth-1:0]) & ~empty;
+
+
+assign irq_full_o = full & ~reg_status_q[0];
 
 always_comb begin : irq_decoder
   irqs_o = Depth'('0);
@@ -35,33 +43,26 @@ always_comb begin : irq_decoder
   end
 end
 
-always_comb begin : apb_demux
+always_comb begin : read_logic
 
   apb_sbr.prdata = 32'h0;
   
-    if (apb_write) begin
-      unique case (apb_sbr.paddr[7:0])
-        8'h08:;
-        8'h0C:;
-        8'h10:;
-        default:;
-      endcase
-    end else if (apb_read) begin
-      unique case (apb_sbr.paddr[7:0])
-        8'h00: apb_sbr.prdata = reg_status_q;
-        8'h04: apb_sbr.prdata = reg_last_q;
-        default:;
-      endcase
-    end
+  if (apb_read) begin
+    unique case (apb_sbr.paddr[7:0])
+      8'h00: apb_sbr.prdata = reg_status_q;
+      8'h04: apb_sbr.prdata = 32'(reg_last_q);
+      default:;
+    endcase
+  end
 
 end
 
-always_comb begin : tq_ctrl
+always_comb begin : write_logic
 
   reg_last_d   = reg_last_q;
   ts_push      = TimestampWidth'('h0);
-  ts_id        = TimestampWidth'('h0);
   push_payload = PayloadWidth'('h0);
+  ptr_drop     = PayloadWidth'('h0);
   push         = 1'b0;
   pop          = 1'b0;
   drop         = 1'b0;
@@ -71,17 +72,18 @@ always_comb begin : tq_ctrl
       8'h08: begin // PUSH_REL
         push         = 1'b1;
         ts_push      = mtime_i[TimestampWidth-1:0] + apb_sbr.pwdata[TimestampWidth-1:0];
-        ts_id        = mtime_i[TimestampWidth-1:0];
-        reg_last_d   = mtime_i[TimestampWidth-1:0];
+        reg_last_d   = ptr_last;
         push_payload = apb_sbr.pwdata[(PayloadWidth + 24)-1:24];
       end
       8'h0C: begin // PUSH_ABS
         push         = 1'b1;
         ts_push      = apb_sbr.pwdata[TimestampWidth-1:0];
-        reg_last_d   = mtime_i[TimestampWidth-1:0];
+        reg_last_d   = ptr_last;
         push_payload = apb_sbr.pwdata[(PayloadWidth + 24)-1:24];
       end
       8'h10: begin // DROP
+        drop         = 1'b1;
+        ptr_drop     = apb_sbr.pwdata[PayloadWidth-1:0];
       end
       default:;
     endcase
@@ -111,42 +113,14 @@ priority_queue #(
   .push_i          (push),
   .pop_i           (pop),
   .drop_i          (drop),
-  .push_insert_i   (ts_id),
+  .free_ptr_o      (ptr_last),
+  .top_ptr_o       (ptr_top),
+  .drop_ptr_i      (ptr_drop),
   .push_dispatch_i (ts_push),
   .payload_o       (pop_payload),
   .payload_i       (push_payload),
   .peek_data_o     (ts_peek)
 );
-
-/*
-pq #(
-  .DEPTH (Depth),
-  .TW    (TimestampWidth),
-  .PW    (PayloadWidth)
-)i_pq_core (
-  .clk_i,
-  .rst_ni,
-  .push_i          (push),
-  .pop_i           (pop),
-  .drop_i          (drop),
-  .drop_id_i       (),
-  .push_id_i       (ts_id),
-  .push_rdy_o      (),
-  .drop_rdy_o      (),
-  .pop_rdy_o       (),
-  .cnt_o           (),
-  .full_o          (full),
-  .empty_o         (empty),
-  .data_i          (ts_push),
-  .data_o          (),
-  .payload_o       (pop_payload),
-  .payload_i       (push_payload),
-  .peek_vld_o      (),
-  .peek_data_o     (ts_peek),
-  .overflow_o      (),
-  .data_overflow_o ()
-);
-*/
 
 endmodule : apb_antiq
 

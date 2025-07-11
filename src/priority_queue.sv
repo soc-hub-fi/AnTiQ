@@ -11,15 +11,17 @@ module priority_queue #(
   input  logic                    push_i,
   input  logic                    pop_i,
   input  logic                    drop_i,
-  input  logic    [TimeWidth-1:0] push_insert_i,
   input  logic    [TimeWidth-1:0] push_dispatch_i,
+  output logic     [IdxWidth-1:0] free_ptr_o,
+  output logic     [IdxWidth-1:0] top_ptr_o,
+  input  logic     [IdxWidth-1:0] drop_ptr_i,
   input  logic [PayloadWidth-1:0] payload_i,
   output logic [PayloadWidth-1:0] payload_o,
   output logic    [TimeWidth-1:0] peek_data_o
 );
 
 typedef struct packed {
-  logic    [TimeWidth-1:0] dispatch, insert;
+  logic    [TimeWidth-1:0] dispatch;
   logic [PayloadWidth-1:0] payload;
   logic     [IdxWidth-1:0] idx;
   logic                    valid;
@@ -39,6 +41,8 @@ assign empty_o = ~(|valid);
 
 assign top_ptr_d   = entry_q[top_idx].idx;
 assign peek_data_o = entry_q[top_idx].dispatch;
+assign free_ptr_o  = free_ptr_q;
+assign top_ptr_o   = top_ptr_q;
 
 always_comb begin : access_logic
 
@@ -47,7 +51,6 @@ always_comb begin : access_logic
 
   if (push_i) begin
     entry_d[free_ptr_q].dispatch = push_dispatch_i;
-    entry_d[free_ptr_q].insert   = push_insert_i;
     entry_d[free_ptr_q].payload  = payload_i;
     entry_d[free_ptr_q].valid    = 1'b1;
   end
@@ -55,6 +58,10 @@ always_comb begin : access_logic
   if (pop_i) begin
     entry_d[top_ptr_q].valid = 1'b0;
     payload_o                = entry_q[top_ptr_q].payload;
+  end
+
+  if (drop_i) begin
+    entry_d[drop_ptr_i].valid = 1'b0;
   end
 
 end
@@ -80,7 +87,6 @@ end
 for (genvar i=0; i<Depth; i++) begin : depth_loop
   always_ff @(posedge clk_i) begin : ff_no_rst
     entry_q[i].dispatch <= entry_d[i].dispatch;
-    entry_q[i].insert   <= entry_d[i].insert;
     entry_q[i].payload  <= entry_d[i].payload;
     entry_q[i].valid    <= entry_d[i].valid;
   end
