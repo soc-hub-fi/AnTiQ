@@ -64,7 +64,7 @@ Base address in current Atalanta integration: **32'h0004_0000**
 `drop`:
 | Field Offset | (Reserved) Width | Name   | Description |
 |--------------|------------------|--------|-------------|
-|              | `clog2(Depth)`   | `drop` | The queue index for the entry to be dropped. Generally sourced by polling `last` after inserting an entry. |
+| 0            | `clog2(Depth)`   | `drop` | The queue index for the entry to be dropped. Generally sourced by polling `last` after inserting an entry. |
 
 
 
