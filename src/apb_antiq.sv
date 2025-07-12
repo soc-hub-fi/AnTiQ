@@ -64,7 +64,6 @@ always_comb begin : write_logic
   push_payload = PayloadWidth'('h0);
   ptr_drop     = PayloadWidth'('h0);
   push         = 1'b0;
-  pop          = 1'b0;
   drop         = 1'b0;
 
   if (apb_write) begin
