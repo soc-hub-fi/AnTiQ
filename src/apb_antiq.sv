@@ -7,6 +7,7 @@ module apb_antiq #(
   input  logic      [63:0] mtime_i,
   output logic [Depth-1:0] irqs_o,
   output logic             irq_full_o,
+  output logic             irq_nfull_o,
   APB.Slave                apb_sbr
 );
 
@@ -33,8 +34,8 @@ assign reg_status_d = {status_top ,15'h0, empty, 7'h0, full};
 
 assign pop = (ts_peek <= mtime_i[TimestampWidth-1:0]) & ~empty;
 
-
-assign irq_full_o = full & ~reg_status_q[0];
+assign irq_full_o  =  full & ~reg_status_q[0];
+assign irq_nfull_o = ~full &  reg_status_q[0];
 
 always_comb begin : irq_decoder
   irqs_o = Depth'('0);
