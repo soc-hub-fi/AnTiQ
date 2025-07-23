@@ -2,6 +2,7 @@ module priority_queue #(
   parameter  int unsigned Depth        = 8,
   parameter  int unsigned TimeWidth    = 24,
   parameter  int unsigned PayloadWidth = 3,
+  parameter  bit          BtmArbTree   = 0,
   localparam int unsigned IdxWidth     = $clog2(Depth)
 )(
   input  logic                    clk_i,
@@ -14,6 +15,7 @@ module priority_queue #(
   input  logic    [TimeWidth-1:0] push_dispatch_i,
   output logic     [IdxWidth-1:0] free_ptr_o,
   output logic     [IdxWidth-1:0] top_ptr_o,
+  output logic     [IdxWidth-1:0] btm_ptr_o,
   input  logic     [IdxWidth-1:0] drop_ptr_i,
   input  logic [PayloadWidth-1:0] payload_i,
   output logic [PayloadWidth-1:0] payload_o,
@@ -103,13 +105,32 @@ end
 binary_tree #(
   .TimeWidth    (TimeWidth),
   .PayloadWidth (PayloadWidth),
-  .Depth        (Depth)
-) i_heap (
+  .Depth        (Depth),
+  .MaxTree      (1'b0)
+) i_min_heap (
   .valid_i    (valid),
   .idx_i      (idx),
   .dispatch_i (dispatch),
   .top_idx_o  (top_idx)
 );
+
+if (BtmArbTree) begin
+
+  binary_tree #(
+    .TimeWidth    (TimeWidth),
+    .PayloadWidth (PayloadWidth),
+    .Depth        (Depth),
+    .MaxTree      (1'b1)
+  ) i_max_heap (
+    .valid_i    (valid),
+    .idx_i      (idx),
+    .dispatch_i (dispatch),
+    .top_idx_o  (btm_ptr_o)
+  );
+
+end else begin
+  assign btm_ptr_o = IdxWidth'('0);
+end
 
 endmodule : priority_queue
 
