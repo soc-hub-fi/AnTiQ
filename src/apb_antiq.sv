@@ -83,7 +83,7 @@ always_comb begin : write_logic
 
   if (apb_write) begin
     unique case (apb_sbr.paddr[7:0])
-      PDCtrlAddr: begin
+      PDCtrlAddr: begin // TODO: Register push_paylaod, ptr_drop
         ptr_drop     = IrqWidth'(apb_sbr.pwdata[31:24]);
         push_payload = IrqWidth'(apb_sbr.pwdata[23:16]);
         drop         = apb_sbr.pwdata[8];
