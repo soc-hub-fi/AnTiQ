@@ -30,8 +30,8 @@ logic               [31:0] reg_status_q, reg_status_d;
 logic       [IdxWidth-1:0] reg_last_q, reg_last_d;
 logic [TimestampWidth-1:0] ts_peek, ts_push;
 logic               [63:0] ts_reg_d, ts_reg_q;
-logic       [IdxWidth-1:0] ptr_drop, ptr_top, ptr_last, ptr_btm;
-logic   [PayloadWidth-1:0] pop_payload, push_payload;
+logic       [IdxWidth-1:0] ptr_drop_d, ptr_drop_q, ptr_top, ptr_last, ptr_btm;
+logic   [PayloadWidth-1:0] pop_payload, push_payload_d, push_payload_q;
 logic                      full, empty;
 logic                      push, pop, drop;
 logic                      apb_write, apb_read;
@@ -74,21 +74,21 @@ end
 
 always_comb begin : write_logic
 
-  reg_last_d   = reg_last_q;
-  ts_reg_d     = ts_reg_q;
-  push_payload = PayloadWidth'('h0);
-  ptr_drop     = PayloadWidth'('h0);
-  push         = 1'b0;
-  drop         = 1'b0;
+  reg_last_d     = reg_last_q;
+  ts_reg_d       = ts_reg_q;
+  push_payload_d = push_payload_q;
+  ptr_drop_d     = ptr_drop_q;
+  push           = 1'b0;
+  drop           = 1'b0;
 
   if (apb_write) begin
     unique case (apb_sbr.paddr[7:0])
-      PDCtrlAddr: begin // TODO: Register push_paylaod, ptr_drop
-        ptr_drop     = IrqWidth'(apb_sbr.pwdata[31:24]);
-        push_payload = IrqWidth'(apb_sbr.pwdata[23:16]);
-        drop         = apb_sbr.pwdata[8];
-        push         = apb_sbr.pwdata[0];
-        reg_last_d   = ptr_last;
+      PDCtrlAddr: begin
+        ptr_drop_d     = IrqWidth'(apb_sbr.pwdata[31:24]);
+        push_payload_d = IrqWidth'(apb_sbr.pwdata[23:16]);
+        drop           = apb_sbr.pwdata[8];
+        push           = apb_sbr.pwdata[0];
+        reg_last_d     = ptr_last;
       end
       PRelLoAddr: ts_reg_d[31:0]  = apb_sbr.pwdata + mtime_i[31:0];
       PRelHiAddr: ts_reg_d[63:32] = apb_sbr.pwdata + mtime_i[63:32];
@@ -102,13 +102,17 @@ end
 
 always_ff @(posedge clk_i or negedge rst_ni) begin
   if (~rst_ni) begin
-    ts_reg_q     <= 64'h0;
-    reg_status_q <= 32'h0;
-    reg_last_q   <= 32'h0;
+    ts_reg_q       <= 64'h0;
+    reg_status_q   <= 32'h0;
+    reg_last_q     <= 32'h0;
+    ptr_drop_q     <= PayloadWidth'('h0);
+    push_payload_q <= PayloadWidth'('h0);
   end else begin
-    ts_reg_q     <= ts_reg_d;
-    reg_status_q <= reg_status_d;
-    reg_last_q   <= reg_last_d;
+    ts_reg_q       <= ts_reg_d;
+    reg_status_q   <= reg_status_d;
+    reg_last_q     <= reg_last_d;
+    ptr_drop_q     <= ptr_drop_d;
+    push_payload_q <= push_payload_d;
   end
 end
 
@@ -130,10 +134,10 @@ priority_queue #(
   .free_ptr_o      (ptr_last),
   .top_ptr_o       (ptr_top),
   .btm_ptr_o       (ptr_btm),
-  .drop_ptr_i      (ptr_drop),
+  .drop_ptr_i      (ptr_drop_q),
   .push_dispatch_i (ts_push),
   .payload_o       (pop_payload),
-  .payload_i       (push_payload),
+  .payload_i       (push_payload_q),
   .peek_data_o     (ts_peek)
 );
 
