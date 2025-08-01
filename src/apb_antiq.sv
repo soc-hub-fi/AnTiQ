@@ -84,10 +84,11 @@ always_comb begin : write_logic
   if (apb_write) begin
     unique case (apb_sbr.paddr[7:0])
       PDCtrlAddr: begin
-        ptr_drop   = IrqWidth'(apb_sbr.pwdata[31:24]);
-        drop       = apb_sbr.pwdata[8];
-        push       = apb_sbr.pwdata[0];
-        reg_last_d = ptr_last;
+        ptr_drop     = IrqWidth'(apb_sbr.pwdata[31:24]);
+        push_payload = IrqWidth'(apb_sbr.pwdata[23:16]);
+        drop         = apb_sbr.pwdata[8];
+        push         = apb_sbr.pwdata[0];
+        reg_last_d   = ptr_last;
       end
       PRelLoAddr: ts_reg_d[31:0]  = apb_sbr.pwdata + mtime_i[31:0];
       PRelHiAddr: ts_reg_d[63:32] = apb_sbr.pwdata + mtime_i[63:32];
