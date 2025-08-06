@@ -45,8 +45,8 @@ for (genvar i=0; i<IdxWidth; i++) begin
           res[IdxRes].key   = dispatch_i[IdxA];
           res[IdxRes].idx   = idx_i[IdxA];
           res[IdxRes].valid = valid_i[IdxA];
-          if ((dispatch_i[IdxA] < dispatch_i[IdxB])
-            & valid_i[IdxB]) begin
+          if (((dispatch_i[IdxA] < dispatch_i[IdxB])
+            & valid_i[IdxB]) | ~valid_i[IdxA]) begin
             res[IdxRes].key   = dispatch_i[IdxB];
             res[IdxRes].idx   = idx_i[IdxB];
             res[IdxRes].valid = valid_i[IdxB];
@@ -57,8 +57,8 @@ for (genvar i=0; i<IdxWidth; i++) begin
           res[IdxRes].key   = dispatch_i[IdxA];
           res[IdxRes].idx   = idx_i[IdxA];
           res[IdxRes].valid = valid_i[IdxA];
-          if ((dispatch_i[IdxA] > dispatch_i[IdxB])
-            & valid_i[IdxB]) begin
+          if (((dispatch_i[IdxA] > dispatch_i[IdxB])
+            & valid_i[IdxB]) | ~valid_i[IdxA]) begin
             res[IdxRes].key   = dispatch_i[IdxB];
             res[IdxRes].idx   = idx_i[IdxB];
             res[IdxRes].valid = valid_i[IdxB];
@@ -75,10 +75,10 @@ for (genvar i=0; i<IdxWidth; i++) begin
       localparam int unsigned IdxB   = 2*(i+j)+1;
       
       if (MaxTree) begin
-        assign res[IdxRes] = ((res[IdxA].key < res[IdxB].key) & res[IdxB].valid)
+        assign res[IdxRes] = (((res[IdxA].key < res[IdxB].key) & res[IdxB].valid) | ~res[IdxA].valid)
           ? res[IdxB] : res[IdxA];
       end else begin
-        assign res[IdxRes] = ((res[IdxA].key > res[IdxB].key) & res[IdxB].valid)
+        assign res[IdxRes] = (((res[IdxA].key > res[IdxB].key) & res[IdxB].valid) | ~res[IdxA].valid)
           ? res[IdxB] : res[IdxA];
       end
     end
