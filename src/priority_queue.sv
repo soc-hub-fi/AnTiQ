@@ -36,10 +36,11 @@ logic         [Depth-1:0][TimeWidth-1:0] dispatch;
 logic                     [IdxWidth-1:0] top_idx;
 logic                     [IdxWidth-1:0] top_ptr_d, top_ptr_q;
 logic                     [IdxWidth-1:0] free_ptr_d, free_ptr_q;
-
+logic                                    push_d, push_q;
 
 assign full_o  =   &valid;
 assign empty_o = ~(|valid);
+assign push_d  = push_i;
 
 assign top_ptr_d   = entry_q[top_idx].idx;
 assign peek_data_o = entry_q[top_idx].dispatch;
@@ -51,7 +52,7 @@ always_comb begin : access_logic
   entry_d   = entry_q;
   payload_o = PayloadWidth'('0);
 
-  if (push_i) begin
+  if (push_q) begin
     entry_d[free_ptr_q].dispatch = push_dispatch_i;
     entry_d[free_ptr_q].payload  = payload_i;
     entry_d[free_ptr_q].valid    = 1'b1;
@@ -72,9 +73,11 @@ always_ff @(posedge clk_i or negedge rst_ni) begin : ptr_ff
   if (~rst_ni) begin
     top_ptr_q  <= IdxWidth'('0);
     free_ptr_q <= IdxWidth'('0);
+    push_q     <= 1'b0;
   end else begin
     top_ptr_q  <= top_ptr_d;
     free_ptr_q <= free_ptr_d;
+    push_q     <= push_d;
   end
 end
 
