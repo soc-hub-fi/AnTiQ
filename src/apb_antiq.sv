@@ -59,7 +59,7 @@ end
 always_comb begin : read_logic
 
   apb_sbr.prdata = 32'h0;
-  
+
   if (apb_read) begin
     unique case (apb_sbr.paddr[7:0])
       StatusAddr:  apb_sbr.prdata = reg_status_q;
