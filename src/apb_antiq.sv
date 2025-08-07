@@ -12,9 +12,14 @@ module apb_antiq #(
   APB.Slave                   apb_sbr
 );
 
+initial begin
+  ap_depth: assert(Depth != 0);
+end
+
 localparam int unsigned TimestampWidth = 24;
 localparam int unsigned PayloadWidth   = $clog2(IrqWidth);
 localparam int unsigned IdxWidth       = $clog2(Depth);
+localparam logic[7:0] DepthMinusOne = Depth-1;
 
 localparam int unsigned StatusAddr  = 8'h0;
 localparam int unsigned LastIdxAddr = 8'h4;
@@ -42,7 +47,7 @@ assign apb_sbr.pready = apb_sbr.psel & apb_sbr.penable;
 
 logic [7:0] status_top;
 assign reg_top_d    = PayloadWidth'(ptr_top);
-assign reg_status_d = {16'h0, 7'h0, empty, 7'h0, full};
+assign reg_status_d = {DepthMinusOne, 8'h0, 7'h0, empty, 7'h0, full};
 
 assign pop = (ts_peek <= mtime_i[TimestampWidth-1:0]) & ~empty;
 
