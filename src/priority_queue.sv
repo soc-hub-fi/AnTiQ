@@ -19,7 +19,9 @@ module priority_queue #(
   input  logic     [IdxWidth-1:0] drop_ptr_i,
   input  logic [PayloadWidth-1:0] payload_i,
   output logic [PayloadWidth-1:0] payload_o,
-  output logic    [TimeWidth-1:0] peek_data_o
+  output logic    [TimeWidth-1:0] peek_data_o,
+  output logic [TimeWidth-1:0]    drop_ts_o,
+  output logic [PayloadWidth-1:0] drop_payload_o
 );
 
 typedef struct packed {
@@ -51,6 +53,8 @@ always_comb begin : access_logic
 
   entry_d   = entry_q;
   payload_o = PayloadWidth'('0);
+  drop_ts_o = TimeWidth'('0);
+  drop_payload_o = PayloadWidth'('0);
 
   if (push_q) begin
     entry_d[free_ptr_q].dispatch = push_dispatch_i;
@@ -64,6 +68,8 @@ always_comb begin : access_logic
   end
 
   if (drop_i) begin
+    drop_ts_o = entry_q[drop_ptr_i].dispatch;
+    drop_payload_o = entry_q[drop_ptr_i].payload;
     entry_d[drop_ptr_i].valid = 1'b0;
   end
 

@@ -30,6 +30,9 @@ localparam int unsigned PRelLoAddr  = 8'h14;
 localparam int unsigned PRelHiAddr  = 8'h18;
 localparam int unsigned PAbsLoAddr  = 8'h1C;
 localparam int unsigned PAbsHiAddr  = 8'h20;
+localparam int unsigned DPayloadAddr = 8'h24;
+localparam int unsigned DDispatchLoAddr = 8'h28;
+localparam int unsigned DDispatchHiAddr = 8'h2C;
 
 logic               [31:0] reg_status_q, reg_status_d;
 logic       [IdxWidth-1:0] reg_last_q, reg_last_d;
@@ -40,6 +43,8 @@ logic   [PayloadWidth-1:0] pop_payload, push_payload_d, push_payload_q;
 logic                      full, empty;
 logic                      push, pop, drop;
 logic                      apb_write, apb_read;
+logic [TimestampWidth-1:0] drop_ts_d, drop_ts_q;
+logic [PayloadWidth-1:0]   drop_payload_d, drop_payload_q;
 
 assign apb_write      = apb_sbr.psel & apb_sbr.penable &  apb_sbr.pwrite;
 assign apb_read       = apb_sbr.psel & apb_sbr.penable & ~apb_sbr.pwrite;
@@ -71,6 +76,9 @@ always_comb begin : read_logic
       LastIdxAddr: apb_sbr.prdata = 32'(reg_last_q);
       TopIdxAddr:  apb_sbr.prdata = 32'(ptr_top);
       BtmIdxAddr:  apb_sbr.prdata = 32'(ptr_btm);
+      DDispatchLoAddr: apb_sbr.prdata = 32'(drop_ts_q[31:0]);
+      DDispatchHiAddr: apb_sbr.prdata = 32'(drop_ts_q[63:32]);
+      DPayloadAddr: apb_sbr.prdata = 32'(drop_payload_q);
       default:;
     endcase
   end
@@ -112,12 +120,18 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     reg_last_q     <= 32'h0;
     ptr_drop_q     <= PayloadWidth'('h0);
     push_payload_q <= PayloadWidth'('h0);
+    drop_ts_q      <= TimestampWidth'('h0);
+    drop_payload_q <= PayloadWidth'('h0);
   end else begin
     ts_reg_q       <= ts_reg_d;
     reg_status_q   <= reg_status_d;
     reg_last_q     <= reg_last_d;
     ptr_drop_q     <= ptr_drop_d;
     push_payload_q <= push_payload_d;
+    if (drop) begin
+      drop_ts_q      <= drop_ts_d;
+      drop_payload_q <= drop_payload_d;
+    end
   end
 end
 
@@ -143,7 +157,9 @@ priority_queue #(
   .push_dispatch_i (ts_push),
   .payload_o       (pop_payload),
   .payload_i       (push_payload_q),
-  .peek_data_o     (ts_peek)
+  .peek_data_o     (ts_peek),
+  .drop_ts_o       (drop_ts_d),
+  .drop_payload_o  (drop_payload_d)
 );
 
 endmodule : apb_antiq
