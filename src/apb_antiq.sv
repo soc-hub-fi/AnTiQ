@@ -44,6 +44,7 @@ logic                      full, empty;
 logic                      push, pop, drop;
 logic                      apb_write, apb_read;
 logic [TimestampWidth-1:0] drop_ts_d, drop_ts_q;
+logic               [63:0] drop_ts_apb;
 logic [PayloadWidth-1:0]   drop_payload_d, drop_payload_q;
 
 assign apb_write      = apb_sbr.psel & apb_sbr.penable &  apb_sbr.pwrite;
@@ -55,6 +56,8 @@ assign reg_top_d    = PayloadWidth'(ptr_top);
 assign reg_status_d = {DepthMinusOne, 8'h0, 7'h0, empty, 7'h0, full};
 
 assign pop = (ts_peek <= mtime_i[TimestampWidth-1:0]) & ~empty;
+
+assign drop_ts_apb = 64'(drop_ts_q);
 
 assign irq_full_o  =  full & ~reg_status_q[0];
 assign irq_nfull_o = ~full &  reg_status_q[0];
@@ -76,8 +79,8 @@ always_comb begin : read_logic
       LastIdxAddr: apb_sbr.prdata = 32'(reg_last_q);
       TopIdxAddr:  apb_sbr.prdata = 32'(ptr_top);
       BtmIdxAddr:  apb_sbr.prdata = 32'(ptr_btm);
-      DDispatchLoAddr: apb_sbr.prdata = 32'(drop_ts_q[31:0]);
-      DDispatchHiAddr: apb_sbr.prdata = 32'(drop_ts_q[63:32]);
+      DDispatchLoAddr: apb_sbr.prdata = 32'(drop_ts_apb[31:0]);
+      DDispatchHiAddr: apb_sbr.prdata = 32'(drop_ts_apb[63:32]);
       DPayloadAddr: apb_sbr.prdata = 32'(drop_payload_q);
       default:;
     endcase
