@@ -21,69 +21,104 @@ typedef struct packed {
   logic                 valid;
 } heap_t;
 
-heap_t [NrResultNets-1:0] res;
+heap_t [(Depth-1)-1:0] result_nodes;
 
-for (genvar i=0; i<IdxWidth; i++) begin
+// TODO: Could be refactored & made neater
+for (genvar i=0; i<IdxWidth; i++) begin : g_levels
 
-  if (i==0) begin : top
-    if (MaxTree) begin
-      assign top_idx_o = ((res[0].valid & (res[0].key > res[1].key))| ~res[1].valid)
-        ? res[0].idx : res[1].idx;
-    end else begin
-      assign top_idx_o = ((res[0].valid & (res[0].key < res[1].key))| ~res[1].valid)
-        ? res[0].idx : res[1].idx;
+  if (i==0) begin : g_top
+
+    localparam int unsigned InputBase = Depth-4;
+
+    heap_t [1:0] inputs;
+    heap_t top;
+
+    for (genvar j=0; j<2; j++) begin : g_input_assign
+      assign inputs[j] = result_nodes[j+InputBase];
     end
-  end else if (i==IdxWidth-1) begin : bottom
-    for (genvar j=0; j<(2**i); j++) begin // i==2
 
-      localparam int unsigned IdxRes = i+j;
-      localparam int unsigned IdxA   = 2*j;
-      localparam int unsigned IdxB   = (2*j)+1;
+    logic switch;
+    logic k_gt;
 
-      if (MaxTree) begin
-        always_comb begin
-          res[IdxRes].key   = dispatch_i[IdxA];
-          res[IdxRes].idx   = idx_i[IdxA];
-          res[IdxRes].valid = valid_i[IdxA];
-          if (((dispatch_i[IdxA] < dispatch_i[IdxB])
-            & valid_i[IdxB]) | ~valid_i[IdxA]) begin
-            res[IdxRes].key   = dispatch_i[IdxB];
-            res[IdxRes].idx   = idx_i[IdxB];
-            res[IdxRes].valid = valid_i[IdxB];
-          end
-        end
-      end else begin
-        always_comb begin
-          res[IdxRes].key   = dispatch_i[IdxA];
-          res[IdxRes].idx   = idx_i[IdxA];
-          res[IdxRes].valid = valid_i[IdxA];
-          if (((dispatch_i[IdxA] > dispatch_i[IdxB])
-            & valid_i[IdxB]) | ~valid_i[IdxA]) begin
-            res[IdxRes].key   = dispatch_i[IdxB];
-            res[IdxRes].idx   = idx_i[IdxB];
-            res[IdxRes].valid = valid_i[IdxB];
-          end
+    always_comb begin : select_logic
+
+      switch = 1'b1;
+
+      if (inputs[1].valid) begin
+        switch = (MaxTree) ? k_gt : ~k_gt;
+      end
+    end
+
+    assign k_gt = inputs[0].key > inputs[1].key;
+    assign top = (switch) ? inputs[0] : inputs[1];
+    assign top_idx_o = top.idx;
+
+  end else if (i==IdxWidth-1) begin : g_bottom
+
+    heap_t [Depth-1:0] inputs;
+
+    for (genvar j=0; j<Depth; j++) begin : g_input_assign
+      assign inputs[j].key   = dispatch_i[j];
+      assign inputs[j].idx   = idx_i[j];
+      assign inputs[j].valid = valid_i[j];
+    end
+
+    for (genvar k=0; k<Depth/2; k++) begin : g_result
+
+      logic switch;
+      logic k_gt;
+
+      always_comb begin : select_logic
+
+        switch = 1'b1;
+
+        if (inputs[k+1].valid) begin
+          switch = (MaxTree) ? k_gt : ~k_gt;
         end
       end
 
+      assign k_gt = inputs[k].key > inputs[k+1].key;
+      assign result_nodes[k] = (switch) ? inputs[k] : inputs[k+1];
+
     end
-  end else begin : middle
-    for (genvar j=0; j<(2**i); j++) begin // i==1
-      
-      localparam int unsigned IdxRes = (i-1)+j;
-      localparam int unsigned IdxA   = 2*(i+j);
-      localparam int unsigned IdxB   = 2*(i+j)+1;
-      
-      if (MaxTree) begin
-        assign res[IdxRes] = (((res[IdxA].key < res[IdxB].key) & res[IdxB].valid) | ~res[IdxA].valid)
-          ? res[IdxB] : res[IdxA];
-      end else begin
-        assign res[IdxRes] = (((res[IdxA].key > res[IdxB].key) & res[IdxB].valid) | ~res[IdxA].valid)
-          ? res[IdxB] : res[IdxA];
+
+  end else begin : g_middle
+
+    localparam int unsigned LocalBase = Depth-(2**(i+1));
+    localparam int unsigned InputBase = Depth-(2**(i+2));
+    localparam int unsigned LocalInWidth  = 2**(i+1);
+    localparam int unsigned LocalOutWidth = 2**i;
+
+    heap_t [LocalInWidth-1:0] inputs;
+
+    for (genvar j=0; j<LocalInWidth; j++) begin : g_input_assign
+      assign inputs[j] = result_nodes[j+InputBase];
+    end
+
+    for (genvar k=0; k<LocalOutWidth; k++) begin : g_results
+
+      localparam int unsigned ResIdx = k+LocalBase;
+
+      logic switch;
+      logic k_gt;
+      heap_t int_node;
+
+      always_comb begin : select_logic
+
+        switch = 1'b1;
+
+        if (inputs[k+1].valid) begin
+          switch = (MaxTree) ? k_gt : ~k_gt;
+        end
+
       end
+
+      assign k_gt = inputs[k].key > inputs[k+1].key;
+      assign result_nodes[ResIdx] = (switch) ? inputs[k] : inputs[k+1];
+
+
     end
   end
-
 end
 
 endmodule : binary_tree
