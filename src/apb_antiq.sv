@@ -42,6 +42,7 @@ logic       [IdxWidth-1:0] ptr_drop_d, ptr_drop_q, ptr_top, ptr_last, ptr_btm;
 logic   [PayloadWidth-1:0] pop_payload, push_payload_d, push_payload_q;
 logic                      full, empty;
 logic                      push, pop, drop;
+logic                      drop_q;
 logic                      apb_write, apb_read;
 logic [TimestampWidth-1:0] drop_ts_d, drop_ts_q;
 logic               [63:0] drop_ts_apb;
@@ -121,6 +122,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     ts_reg_q       <= 64'h0;
     reg_status_q   <= 32'h0;
     reg_last_q     <= 32'h0;
+    drop_q         <= 1'h0;
     ptr_drop_q     <= PayloadWidth'('h0);
     push_payload_q <= PayloadWidth'('h0);
     drop_ts_q      <= TimestampWidth'('h0);
@@ -129,6 +131,7 @@ always_ff @(posedge clk_i or negedge rst_ni) begin
     ts_reg_q       <= ts_reg_d;
     reg_status_q   <= reg_status_d;
     reg_last_q     <= reg_last_d;
+    drop_q         <= drop;
     ptr_drop_q     <= ptr_drop_d;
     push_payload_q <= push_payload_d;
     if (drop) begin
@@ -152,7 +155,7 @@ priority_queue #(
   .empty_o         (empty),
   .push_i          (push),
   .pop_i           (pop),
-  .drop_i          (drop),
+  .drop_i          (drop_q),
   .free_ptr_o      (ptr_last),
   .top_ptr_o       (ptr_top),
   .btm_ptr_o       (ptr_btm),
